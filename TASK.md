@@ -19,6 +19,9 @@ A personal web-based finance tracker to replace a Google Spreadsheet workflow. B
 - lint: `npm run lint`
 - dev: `npm run dev`
 
+## History
+Commit every change you make properly. Do not attribute anything to Claude.
+
 ## File Structure
 
 ```
@@ -68,17 +71,19 @@ src/
 
 ### Phase 5: Accounts Page
 
-- [ ] Build `src/pages/AccountsPage.tsx` — displays a list of all accounts with their current balance
-- [ ] Add an "Add Account" form (name + initial balance) that inserts into Supabase `accounts` table
-- [ ] Add a "Delete Account" button per row with a confirmation dialog; deletes from Supabase
-- [ ] Add an "Edit Balance" inline input per account row that updates the balance directly in Supabase
+- [x] Build `src/pages/AccountsPage.tsx` — displays a list of all accounts with their current balance
+- [x] Add an "Add Account" form (name + initial balance) that inserts into Supabase `accounts` table
+- [x] Add a "Delete Account" button per row with a confirmation dialog; deletes from Supabase
+- [x] Add an "Edit Balance" inline input per account row that updates the balance directly in Supabase
+- [x] Add an "Edit Account" button per row with a confirmation dialog
 
 ### Phase 6: Categories Page
 
-- [ ] Build `src/pages/CategoriesPage.tsx` — displays all categories
-- [ ] For each category, calculate and display the total credited and debited from the `transactions` table
-- [ ] Add an "Add Category" form (name only) that inserts into Supabase
-- [ ] Add a "Delete Category" button per row (with warning if transactions reference it)
+- [x] Build `src/pages/CategoriesPage.tsx` — displays all categories
+- [x] For each category, calculate and display the total credited and debited from the `transactions` table
+- [x] Add an "Add Category" form (name only) that inserts into Supabase
+- [x] Add a "Delete Category" button per row (with warning if transactions reference it)
+- [x] Add an "Edit Category" button per row (with warning if transactions reference it)
 
 ### Phase 7: Dollar Rate Settings
 
@@ -111,3 +116,18 @@ src/
 - [ ] Ensure all number fields display with 2 decimal places and use locale formatting (UYU)
 - [ ] Add a `vercel.json` with SPA redirect rule so React Router works on Vercel
 - [ ] Add `README.md` with setup instructions: Supabase project creation, running the schema SQL, environment variables, and Vercel deployment steps
+
+
+### Phase 11: Allow to edit accounts and categories
+- [x] Add an "Edit Account" button per row with a confirmation dialog
+- [x] Add an "Edit Category" button per row (with warning if transactions reference it)
+
+
+### Phase 12: More changes
+- [x] Add a functionality that would allow the user to select an account as their main account
+- [x] Recurring payments should be calculated against this account marked as the main account
+- [x] Total balance should be calculated only from those accounts marked as Main
+
+
+### Phase 13: Localization
+- [x] Add spanish language to the whole app
