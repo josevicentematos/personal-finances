@@ -149,3 +149,6 @@ src/
 
 ### Phase 16: SQL Schema
 - [x] The schema should not have any default categories or accounts
+
+### Phase 17: Movements table
+- [ ] Delete debit and credit or rename them, these two should now be income and expenses instead
