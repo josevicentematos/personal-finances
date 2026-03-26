@@ -17,8 +17,10 @@ export function TransactionsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { t } = useTranslation()
 
-  // Filters
-  const [filterMonth, setFilterMonth] = useState('')
+  // Active month tab
+  const [activeMonth, setActiveMonth] = useState<string>('')
+
+  // Filters (account and category only)
   const [filterAccount, setFilterAccount] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
 
@@ -32,8 +34,8 @@ export function TransactionsPage() {
         .from('transactions')
         .select('*, category:categories(*), account:accounts(*)')
         .order('date', { ascending: false }),
-      supabase.from('accounts').select('*').order('created_at'),
-      supabase.from('categories').select('*').order('created_at'),
+      supabase.from('accounts').select('*').order('sort_order', { ascending: true }),
+      supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     ])
 
     if (txRes.error) {
@@ -74,22 +76,42 @@ export function TransactionsPage() {
     setDeleteId(null)
   }
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (filterMonth) {
-        const txMonth = tx.date.substring(0, 7)
-        if (txMonth !== filterMonth) return false
-      }
-      if (filterAccount && tx.account_id !== filterAccount) return false
-      if (filterCategory && tx.category_id !== filterCategory) return false
-      return true
-    })
-  }, [transactions, filterMonth, filterAccount, filterCategory])
-
+  // Get all available months sorted in descending order (most recent first for tabs)
   const monthOptions = useMemo(() => {
     const months = new Set(transactions.map((t) => t.date.substring(0, 7)))
     return Array.from(months).sort().reverse()
   }, [transactions])
+
+  // Set initial active month to most recent
+  useEffect(() => {
+    if (monthOptions.length > 0 && !activeMonth) {
+      setActiveMonth(monthOptions[0] ?? '')
+    }
+  }, [monthOptions, activeMonth])
+
+  // Filter and sort transactions for the active month
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter((tx) => {
+        // Filter by active month
+        if (activeMonth) {
+          const txMonth = tx.date.substring(0, 7)
+          if (txMonth !== activeMonth) return false
+        }
+        if (filterAccount && tx.account_id !== filterAccount) return false
+        if (filterCategory && tx.category_id !== filterCategory) return false
+        return true
+      })
+      // Sort by date ascending (least recent first within month)
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }, [transactions, activeMonth, filterAccount, filterCategory])
+
+  // Format month for display
+  function formatMonthLabel(monthStr: string): string {
+    const [year, month] = monthStr.split('-')
+    const date = new Date(parseInt(year ?? '2000'), parseInt(month ?? '1') - 1)
+    return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+  }
 
   if (loading) return <PageSpinner />
 
@@ -105,21 +127,30 @@ export function TransactionsPage() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Month Tabs */}
+      {monthOptions.length > 0 && (
+        <div className="mb-4 overflow-x-auto">
+          <div className="flex gap-1 border-b border-gray-200 min-w-max">
+            {monthOptions.map((month) => (
+              <button
+                key={month}
+                onClick={() => setActiveMonth(month)}
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeMonth === month
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {formatMonthLabel(month)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          >
-            <option value="">{t('allMonths')}</option>
-            {monthOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
           <select
             value={filterAccount}
             onChange={(e) => setFilterAccount(e.target.value)}
@@ -144,10 +175,9 @@ export function TransactionsPage() {
               </option>
             ))}
           </select>
-          {(filterMonth || filterAccount || filterCategory) && (
+          {(filterAccount || filterCategory) && (
             <button
               onClick={() => {
-                setFilterMonth('')
                 setFilterAccount('')
                 setFilterCategory('')
               }}
@@ -195,9 +225,6 @@ export function TransactionsPage() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('credit')}
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('liquid')}
-                </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('rate')}
                 </th>
@@ -226,9 +253,6 @@ export function TransactionsPage() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
                     {tx.credit ? formatCurrency(tx.credit) : '-'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                    {tx.liquid ? '✓' : '✗'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
                     {tx.dollar_rate.toFixed(2)}

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
+import { SummaryPage } from './pages/SummaryPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { AccountsPage } from './pages/AccountsPage'
 import { CategoriesPage } from './pages/CategoriesPage'
@@ -20,7 +21,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<TransactionsPage />} />
+        <Route index element={<SummaryPage />} />
+        <Route path="transactions" element={<TransactionsPage />} />
         <Route path="accounts" element={<AccountsPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="recurrents" element={<RecurringPage />} />

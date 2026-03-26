@@ -3,12 +3,14 @@ export interface Account {
   name: string
   balance: number
   is_main: boolean
+  sort_order: number
   created_at: string
 }
 
 export interface Category {
   id: string
   name: string
+  sort_order: number
   created_at: string
 }
 
@@ -20,7 +22,6 @@ export interface Transaction {
   account_id: string
   debit: number | null
   credit: number | null
-  liquid: boolean
   dollar_rate: number
   created_at: string
 }
@@ -35,6 +36,7 @@ export interface RecurringPayment {
   name: string
   amount: number
   is_paid: boolean
+  sort_order: number
   created_at: string
 }
 

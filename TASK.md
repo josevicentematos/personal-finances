@@ -131,3 +131,21 @@ src/
 
 ### Phase 13: Localization
 - [x] Add spanish language to the whole app
+
+
+### Phase 14: More changes again
+- [x] In the movements tab there should be tabs that separates the movements by month
+- [x] The order of movements should be least recent (from that month) to more recent on the top
+- [x] Remove the liquid field, it's not necessary anymore
+- [x] Accounts table should be reordable
+- [x] Categories table should be reordable
+- [x] Recurrent payments table should be reordable
+
+
+### Phase 15: Summary tab
+- [x] Add a summary tab, this tab should be the first one in the left menu
+- [x] This tab should include a graphic that summarizes all expenses for that month, it should also show a table with the last 5 movements
+
+
+### Phase 16: SQL Schema
+- [x] The schema should not have any default categories or accounts

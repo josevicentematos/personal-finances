@@ -1,0 +1,186 @@
+import { useState, useEffect, useMemo } from 'react'
+import { supabase } from '@/lib/supabase'
+import { TransactionWithRelations, Category } from '@/types'
+import { formatCurrency, formatDate } from '@/lib/format'
+import { PageSpinner } from '@/components/Spinner'
+import { useTranslation } from '@/lib/i18n'
+
+interface CategoryExpense {
+  category: Category
+  total: number
+}
+
+export function SummaryPage() {
+  const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
+  const [loading, setLoading] = useState(true)
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  async function fetchData() {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*, category:categories(*), account:accounts(*)')
+      .order('date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching transactions:', error)
+    } else {
+      setTransactions(data ?? [])
+    }
+
+    setLoading(false)
+  }
+
+  // Get current month in YYYY-MM format
+  const currentMonth = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+
+  // Filter transactions for current month
+  const currentMonthTransactions = useMemo(() => {
+    return transactions.filter((tx) => tx.date.substring(0, 7) === currentMonth)
+  }, [transactions, currentMonth])
+
+  // Calculate expenses by category for current month
+  const categoryExpenses = useMemo(() => {
+    const expenseMap = new Map<string, CategoryExpense>()
+
+    currentMonthTransactions.forEach((tx) => {
+      if (tx.debit && tx.category) {
+        const existing = expenseMap.get(tx.category_id)
+        if (existing) {
+          existing.total += tx.debit
+        } else {
+          expenseMap.set(tx.category_id, {
+            category: tx.category,
+            total: tx.debit,
+          })
+        }
+      }
+    })
+
+    return Array.from(expenseMap.values()).sort((a, b) => b.total - a.total)
+  }, [currentMonthTransactions])
+
+  // Get max expense for chart scaling
+  const maxExpense = useMemo(() => {
+    return Math.max(...categoryExpenses.map((e) => e.total), 1)
+  }, [categoryExpenses])
+
+  // Get last 5 transactions
+  const recentTransactions = useMemo(() => {
+    return transactions.slice(0, 5)
+  }, [transactions])
+
+  // Format month for display
+  function formatMonthLabel(monthStr: string): string {
+    const [year, month] = monthStr.split('-')
+    const date = new Date(parseInt(year ?? '2000'), parseInt(month ?? '1') - 1)
+    return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  }
+
+  if (loading) return <PageSpinner />
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('summary')}</h1>
+
+      {/* Monthly Expenses Chart */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          {t('expensesFor')} {formatMonthLabel(currentMonth)}
+        </h2>
+
+        {categoryExpenses.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">{t('noExpensesThisMonth')}</p>
+        ) : (
+          <div className="space-y-3">
+            {categoryExpenses.map((item) => (
+              <div key={item.category.id} className="flex items-center gap-3">
+                <div className="w-32 text-sm text-gray-600 truncate flex-shrink-0">
+                  {item.category.name}
+                </div>
+                <div className="flex-1 h-8 bg-gray-100 rounded-md overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-md transition-all duration-300"
+                    style={{ width: `${(item.total / maxExpense) * 100}%` }}
+                  />
+                </div>
+                <div className="w-28 text-sm text-gray-900 text-right flex-shrink-0">
+                  {formatCurrency(item.total)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {categoryExpenses.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
+            <span className="font-medium text-gray-700">{t('totalExpenses')}</span>
+            <span className="font-bold text-gray-900">
+              {formatCurrency(categoryExpenses.reduce((sum, e) => sum + e.total, 0))}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Recent Transactions */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('recentTransactions')}</h2>
+
+        {recentTransactions.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">{t('noTransactionsYet')}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('date')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('description')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('category')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('amount')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentTransactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(tx.date)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                      {tx.description}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      {tx.category?.name ?? '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
+                      {tx.debit ? (
+                        <span className="text-red-600">-{formatCurrency(tx.debit)}</span>
+                      ) : tx.credit ? (
+                        <span className="text-green-600">+{formatCurrency(tx.credit)}</span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

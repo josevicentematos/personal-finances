@@ -4,6 +4,7 @@ CREATE TABLE accounts (
   name TEXT NOT NULL,
   balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
   is_main BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -11,6 +12,7 @@ CREATE TABLE accounts (
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -23,7 +25,6 @@ CREATE TABLE transactions (
   account_id UUID NOT NULL REFERENCES accounts(id),
   debit NUMERIC(15, 2),
   credit NUMERIC(15, 2),
-  liquid BOOLEAN NOT NULL DEFAULT TRUE,
   dollar_rate NUMERIC(10, 2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -34,6 +35,7 @@ CREATE TABLE recurring_payments (
   name TEXT NOT NULL,
   amount NUMERIC(15, 2) NOT NULL,
   is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -49,23 +51,6 @@ CREATE TABLE app_settings (
 CREATE INDEX idx_transactions_date ON transactions(date DESC);
 CREATE INDEX idx_transactions_account ON transactions(account_id);
 CREATE INDEX idx_transactions_category ON transactions(category_id);
-
--- Seed default categories
-INSERT INTO categories (name) VALUES
-  ('Income'),
-  ('Recurrents'),
-  ('Groceries'),
-  ('Takeout'),
-  ('Misc'),
-  ('Cash'),
-  ('Savings');
-
--- Seed default accounts
-INSERT INTO accounts (name, balance, is_main) VALUES
-  ('Main Bank Account', 0, TRUE),
-  ('Second Bank Account', 0, FALSE),
-  ('Savings', 0, FALSE),
-  ('Cash', 0, FALSE);
 
 -- Seed app settings with default password hash (password: "admin")
 -- SHA-256 hash of "admin": 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918

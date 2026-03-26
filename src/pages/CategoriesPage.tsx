@@ -5,7 +5,22 @@ import { formatCurrency } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 
 interface CategoryWithTotals extends Category {
   total_debit: number
@@ -25,6 +40,13 @@ export function CategoriesPage() {
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   useEffect(() => {
     fetchCategories()
   }, [])
@@ -33,7 +55,7 @@ export function CategoriesPage() {
     const { data: categoriesData, error: catError } = await supabase
       .from('categories')
       .select('*')
-      .order('created_at', { ascending: true })
+      .order('sort_order', { ascending: true })
 
     if (catError) {
       console.error('Error fetching categories:', catError)
@@ -66,7 +88,12 @@ export function CategoriesPage() {
     e.preventDefault()
     setSubmitting(true)
 
-    const { error } = await supabase.from('categories').insert({ name: newName })
+    const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order), -1)
+
+    const { error } = await supabase.from('categories').insert({
+      name: newName,
+      sort_order: maxOrder + 1,
+    })
 
     if (error) {
       console.error('Error adding category:', error)
@@ -145,6 +172,38 @@ export function CategoriesPage() {
     setEditWarning(false)
   }
 
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = categories.findIndex((c) => c.id === active.id)
+    const newIndex = categories.findIndex((c) => c.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Reorder locally first for immediate feedback
+    const newCategories = [...categories]
+    const [movedItem] = newCategories.splice(oldIndex, 1)
+    if (movedItem) {
+      newCategories.splice(newIndex, 0, movedItem)
+    }
+    setCategories(newCategories)
+
+    // Update sort_order in database
+    const updates = newCategories.map((category, index) => ({
+      id: category.id,
+      sort_order: index,
+    }))
+
+    for (const update of updates) {
+      await supabase
+        .from('categories')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
+  }
+
   if (loading) return <PageSpinner />
 
   return (
@@ -180,78 +239,90 @@ export function CategoriesPage() {
         />
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('name')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('totalDebited')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('totalCredited')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {categories.map((category) => (
-                <tr key={category.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {editingId === category.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="px-2 py-1 border border-gray-300 rounded"
-                          autoFocus
-                        />
-                        <button
-                          onClick={checkAndConfirmEdit}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          {t('save')}
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          {t('cancel')}
-                        </button>
-                      </div>
-                    ) : (
-                      category.name
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">
-                    {formatCurrency(category.total_debit)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">
-                    {formatCurrency(category.total_credit)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                    <button
-                      onClick={() => startEdit(category)}
-                      className="text-blue-600 hover:text-blue-800"
-                      disabled={editingId !== null}
-                    >
-                      {t('edit')}
-                    </button>
-                    <button
-                      onClick={() => checkAndDelete(category.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      {t('delete')}
-                    </button>
-                  </td>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <DragHandleHeader />
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('name')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('totalDebited')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('totalCredited')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('actions')}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <SortableContext
+                  items={categories.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {categories.map((category) => (
+                    <SortableRow key={category.id} id={category.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {editingId === category.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded"
+                              autoFocus
+                            />
+                            <button
+                              onClick={checkAndConfirmEdit}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              {t('save')}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {t('cancel')}
+                            </button>
+                          </div>
+                        ) : (
+                          category.name
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">
+                        {formatCurrency(category.total_debit)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">
+                        {formatCurrency(category.total_credit)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                        <button
+                          onClick={() => startEdit(category)}
+                          className="text-blue-600 hover:text-blue-800"
+                          disabled={editingId !== null}
+                        >
+                          {t('edit')}
+                        </button>
+                        <button
+                          onClick={() => checkAndDelete(category.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          {t('delete')}
+                        </button>
+                      </td>
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </DndContext>
         </div>
       )}
 

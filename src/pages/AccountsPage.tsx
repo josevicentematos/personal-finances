@@ -5,7 +5,22 @@ import { formatCurrency } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -22,6 +37,13 @@ export function AccountsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const { t } = useTranslation()
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   useEffect(() => {
     fetchAccounts()
   }, [])
@@ -30,9 +52,7 @@ export function AccountsPage() {
     const { data, error } = await supabase
       .from('accounts')
       .select('*')
-      .order('created_at', { ascending: true })
-
-    console.log('Fetched accounts:', data)
+      .order('sort_order', { ascending: true })
 
     if (error) {
       console.error('Error fetching accounts:', error)
@@ -46,9 +66,12 @@ export function AccountsPage() {
     e.preventDefault()
     setSubmitting(true)
 
+    const maxOrder = accounts.reduce((max, a) => Math.max(max, a.sort_order), -1)
+
     const { error } = await supabase.from('accounts').insert({
       name: newName,
       balance: parseFloat(newBalance) || 0,
+      sort_order: maxOrder + 1,
     })
 
     if (error) {
@@ -77,21 +100,18 @@ export function AccountsPage() {
 
   async function handleToggleMain(id: string, currentIsMain: boolean) {
     setErrorMessage(null)
-    console.log('Toggling main for account:', id, 'from', currentIsMain, 'to', !currentIsMain)
     const { data, error } = await supabase
       .from('accounts')
       .update({ is_main: !currentIsMain })
       .eq('id', id)
       .select()
 
-    console.log('Update result:', { data, error })
-
     if (error) {
       console.error('Error toggling main account:', error)
       setErrorMessage(`Failed to update: ${error.message}`)
     } else if (!data || data.length === 0) {
       console.error('No rows updated for account:', id)
-      setErrorMessage('Failed to update: No rows were modified. The is_main column may not exist in your database. Please run the latest schema migration.')
+      setErrorMessage('Failed to update: No rows were modified.')
     } else {
       fetchAccounts()
     }
@@ -141,6 +161,38 @@ export function AccountsPage() {
     setEditingNameId(null)
     setEditName('')
     setConfirmEditId(null)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = accounts.findIndex((a) => a.id === active.id)
+    const newIndex = accounts.findIndex((a) => a.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Reorder locally first for immediate feedback
+    const newAccounts = [...accounts]
+    const [movedItem] = newAccounts.splice(oldIndex, 1)
+    if (movedItem) {
+      newAccounts.splice(newIndex, 0, movedItem)
+    }
+    setAccounts(newAccounts)
+
+    // Update sort_order in database
+    const updates = newAccounts.map((account, index) => ({
+      id: account.id,
+      sort_order: index,
+    }))
+
+    for (const update of updates) {
+      await supabase
+        .from('accounts')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
   }
 
   if (loading) return <PageSpinner />
@@ -207,118 +259,130 @@ export function AccountsPage() {
         />
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('main')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('name')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('balance')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {accounts.map((account) => (
-                <tr key={account.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <input
-                      type="checkbox"
-                      checked={account.is_main ?? false}
-                      onChange={() => handleToggleMain(account.id, account.is_main ?? false)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {editingNameId === account.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="px-2 py-1 border border-gray-300 rounded"
-                          autoFocus
-                        />
-                        <button
-                          onClick={confirmEditName}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          {t('save')}
-                        </button>
-                        <button
-                          onClick={cancelEditName}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          {t('cancel')}
-                        </button>
-                      </div>
-                    ) : (
-                      account.name
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                    {editingId === account.id ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <input
-                          type="number"
-                          value={editBalance}
-                          onChange={(e) => setEditBalance(e.target.value)}
-                          step="0.01"
-                          className="w-32 px-2 py-1 border border-gray-300 rounded text-right"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleUpdateBalance(account.id)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          {t('save')}
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          {t('cancel')}
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        onClick={() => {
-                          setEditingId(account.id)
-                          setEditBalance(account.balance.toString())
-                        }}
-                        className={`cursor-pointer hover:underline ${
-                          account.balance >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {formatCurrency(account.balance)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                    <button
-                      onClick={() => startEditName(account)}
-                      className="text-blue-600 hover:text-blue-800"
-                      disabled={editingNameId !== null}
-                    >
-                      {t('edit')}
-                    </button>
-                    <button
-                      onClick={() => setDeleteId(account.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      {t('delete')}
-                    </button>
-                  </td>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <DragHandleHeader />
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('main')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('name')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('balance')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('actions')}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <SortableContext
+                  items={accounts.map((a) => a.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {accounts.map((account) => (
+                    <SortableRow key={account.id} id={account.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <input
+                          type="checkbox"
+                          checked={account.is_main ?? false}
+                          onChange={() => handleToggleMain(account.id, account.is_main ?? false)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {editingNameId === account.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded"
+                              autoFocus
+                            />
+                            <button
+                              onClick={confirmEditName}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              {t('save')}
+                            </button>
+                            <button
+                              onClick={cancelEditName}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {t('cancel')}
+                            </button>
+                          </div>
+                        ) : (
+                          account.name
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        {editingId === account.id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <input
+                              type="number"
+                              value={editBalance}
+                              onChange={(e) => setEditBalance(e.target.value)}
+                              step="0.01"
+                              className="w-32 px-2 py-1 border border-gray-300 rounded text-right"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleUpdateBalance(account.id)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              {t('save')}
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {t('cancel')}
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setEditingId(account.id)
+                              setEditBalance(account.balance.toString())
+                            }}
+                            className={`cursor-pointer hover:underline ${
+                              account.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {formatCurrency(account.balance)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                        <button
+                          onClick={() => startEditName(account)}
+                          className="text-blue-600 hover:text-blue-800"
+                          disabled={editingNameId !== null}
+                        >
+                          {t('edit')}
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(account.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          {t('delete')}
+                        </button>
+                      </td>
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </DndContext>
         </div>
       )}
 

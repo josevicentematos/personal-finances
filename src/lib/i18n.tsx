@@ -9,6 +9,7 @@ const translations = {
     appTitleFull: 'Personal Finance',
 
     // Navigation
+    navSummary: 'Summary',
     navTransactions: 'Transactions',
     navAccounts: 'Accounts',
     navCategories: 'Categories',
@@ -94,6 +95,13 @@ const translations = {
     english: 'English',
     spanish: 'Spanish',
 
+    // Summary page
+    summary: 'Summary',
+    expensesFor: 'Expenses for',
+    noExpensesThisMonth: 'No expenses this month',
+    totalExpenses: 'Total Expenses',
+    recentTransactions: 'Recent Transactions',
+
     // Transactions page
     transactions: 'Transactions',
     addTransaction: 'Add Transaction',
@@ -136,6 +144,7 @@ const translations = {
     appTitleFull: 'Finanzas Personales',
 
     // Navigation
+    navSummary: 'Resumen',
     navTransactions: 'Movimientos',
     navAccounts: 'Cuentas',
     navCategories: 'Categorias',
@@ -220,6 +229,13 @@ const translations = {
     languageLabel: 'Idioma de la App',
     english: 'Ingles',
     spanish: 'Espanol',
+
+    // Summary page
+    summary: 'Resumen',
+    expensesFor: 'Gastos de',
+    noExpensesThisMonth: 'Sin gastos este mes',
+    totalExpenses: 'Total Gastos',
+    recentTransactions: 'Movimientos Recientes',
 
     // Transactions page
     transactions: 'Movimientos',

@@ -5,7 +5,22 @@ import { formatCurrency } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 
 export function RecurringPage() {
   const [payments, setPayments] = useState<RecurringPayment[]>([])
@@ -17,13 +32,20 @@ export function RecurringPage() {
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   useEffect(() => {
     fetchData()
   }, [])
 
   async function fetchData() {
     const [paymentsRes, accountsRes] = await Promise.all([
-      supabase.from('recurring_payments').select('*').order('created_at', { ascending: true }),
+      supabase.from('recurring_payments').select('*').order('sort_order', { ascending: true }),
       supabase.from('accounts').select('*').eq('is_main', true),
     ])
 
@@ -46,10 +68,13 @@ export function RecurringPage() {
     e.preventDefault()
     setSubmitting(true)
 
+    const maxOrder = payments.reduce((max, p) => Math.max(max, p.sort_order), -1)
+
     const { error } = await supabase.from('recurring_payments').insert({
       name: newName,
       amount: parseFloat(newAmount),
       is_paid: false,
+      sort_order: maxOrder + 1,
     })
 
     if (error) {
@@ -86,6 +111,38 @@ export function RecurringPage() {
       fetchData()
     }
     setDeleteId(null)
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const oldIndex = payments.findIndex((p) => p.id === active.id)
+    const newIndex = payments.findIndex((p) => p.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Reorder locally first for immediate feedback
+    const newPayments = [...payments]
+    const [movedItem] = newPayments.splice(oldIndex, 1)
+    if (movedItem) {
+      newPayments.splice(newIndex, 0, movedItem)
+    }
+    setPayments(newPayments)
+
+    // Update sort_order in database
+    const updates = newPayments.map((payment, index) => ({
+      id: payment.id,
+      sort_order: index,
+    }))
+
+    for (const update of updates) {
+      await supabase
+        .from('recurring_payments')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
   }
 
   if (loading) return <PageSpinner />
@@ -140,60 +197,76 @@ export function RecurringPage() {
         />
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('paid')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('name')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('amount')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {payments.map((payment) => (
-                <tr key={payment.id} className={payment.is_paid ? 'bg-gray-50' : ''}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={payment.is_paid}
-                      onChange={() => handleTogglePaid(payment.id, payment.is_paid)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                    />
-                  </td>
-                  <td
-                    className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                      payment.is_paid ? 'text-gray-400 line-through' : 'text-gray-900'
-                    }`}
-                  >
-                    {payment.name}
-                  </td>
-                  <td
-                    className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
-                      payment.is_paid ? 'text-gray-400' : 'text-gray-900'
-                    }`}
-                  >
-                    {formatCurrency(payment.amount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <button
-                      onClick={() => setDeleteId(payment.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      {t('delete')}
-                    </button>
-                  </td>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <DragHandleHeader />
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('paid')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('name')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('amount')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('actions')}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <SortableContext
+                  items={payments.map((p) => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {payments.map((payment) => (
+                    <SortableRow
+                      key={payment.id}
+                      id={payment.id}
+                      className={payment.is_paid ? 'bg-gray-50' : ''}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={payment.is_paid}
+                          onChange={() => handleTogglePaid(payment.id, payment.is_paid)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td
+                        className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          payment.is_paid ? 'text-gray-400 line-through' : 'text-gray-900'
+                        }`}
+                      >
+                        {payment.name}
+                      </td>
+                      <td
+                        className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                          payment.is_paid ? 'text-gray-400' : 'text-gray-900'
+                        }`}
+                      >
+                        {formatCurrency(payment.amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <button
+                          onClick={() => setDeleteId(payment.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          {t('delete')}
+                        </button>
+                      </td>
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </DndContext>
         </div>
       )}
 

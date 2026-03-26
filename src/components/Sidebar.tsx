@@ -6,7 +6,8 @@ export function Sidebar() {
   const { t } = useTranslation()
 
   const navItems = [
-    { to: '/', label: t('navTransactions'), icon: '💳' },
+    { to: '/', label: t('navSummary'), icon: '📊' },
+    { to: '/transactions', label: t('navTransactions'), icon: '💳' },
     { to: '/accounts', label: t('navAccounts'), icon: '🏦' },
     { to: '/categories', label: t('navCategories'), icon: '📁' },
     { to: '/recurrents', label: t('navRecurring'), icon: '🔄' },
