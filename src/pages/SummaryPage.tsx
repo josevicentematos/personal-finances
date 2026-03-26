@@ -87,16 +87,16 @@ export function SummaryPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('summary')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('summary')}</h1>
 
       {/* Monthly Expenses Chart */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
           {t('expensesFor')} {formatMonthLabel(currentMonth)}
         </h2>
 
         {categoryExpenses.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">{t('noExpensesThisMonth')}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('noExpensesThisMonth')}</p>
         ) : (
           <div className="space-y-3">
             {categoryExpenses.map((item) => (
@@ -105,10 +105,10 @@ export function SummaryPage() {
                   className="w-4 h-4 rounded-full flex-shrink-0"
                   style={{ backgroundColor: item.category.color || '#E8F4FD' }}
                 />
-                <div className="w-28 text-sm text-gray-600 truncate flex-shrink-0">
+                <div className="w-28 text-sm text-gray-600 dark:text-gray-400 truncate flex-shrink-0">
                   {item.category.name}
                 </div>
-                <div className="flex-1 h-8 bg-gray-100 rounded-md overflow-hidden">
+                <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
                   <div
                     className="h-full rounded-md transition-all duration-300"
                     style={{
@@ -117,7 +117,7 @@ export function SummaryPage() {
                     }}
                   />
                 </div>
-                <div className="w-28 text-sm text-gray-900 text-right flex-shrink-0">
+                <div className="w-28 text-sm text-gray-900 dark:text-white text-right flex-shrink-0">
                   {formatCurrency(item.total)}
                 </div>
               </div>
@@ -126,9 +126,9 @@ export function SummaryPage() {
         )}
 
         {categoryExpenses.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
-            <span className="font-medium text-gray-700">{t('totalExpenses')}</span>
-            <span className="font-bold text-gray-900">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{t('totalExpenses')}</span>
+            <span className="font-bold text-gray-900 dark:text-white">
               {formatCurrency(categoryExpenses.reduce((sum, e) => sum + e.total, 0))}
             </span>
           </div>
@@ -136,36 +136,36 @@ export function SummaryPage() {
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('recentTransactions')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('recentTransactions')}</h2>
 
         {recentTransactions.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">{t('noTransactionsYet')}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('noTransactionsYet')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('date')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('description')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('category')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('amount')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {recentTransactions.map((tx) => (
                   <tr
                     key={tx.id}
                     className="hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: tx.category?.color || '#FFFFFF' }}
+                    style={{ backgroundColor: tx.category?.color || 'transparent' }}
                   >
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(tx.date)}
@@ -178,9 +178,9 @@ export function SummaryPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                       {tx.expense ? (
-                        <span className="text-red-600">-{formatCurrency(tx.expense)}</span>
+                        <span className="text-red-600 dark:text-red-700">-{formatCurrency(tx.expense)}</span>
                       ) : tx.income ? (
-                        <span className="text-green-600">+{formatCurrency(tx.income)}</span>
+                        <span className="text-green-600 dark:text-green-700">+{formatCurrency(tx.income)}</span>
                       ) : (
                         '-'
                       )}

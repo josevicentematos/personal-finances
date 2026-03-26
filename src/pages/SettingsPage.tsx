@@ -4,6 +4,7 @@ import { AppSettings } from '@/types'
 import { PageSpinner } from '@/components/Spinner'
 import { formatDateTime, normalizeNumberInput } from '@/lib/format'
 import { useTranslation, Language } from '@/lib/i18n'
+import { useTheme, ThemeMode } from '@/lib/theme'
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -12,6 +13,7 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const { t, language, setLanguage } = useTranslation()
+  const { mode, setMode } = useTheme()
 
   useEffect(() => {
     fetchSettings()
@@ -60,16 +62,20 @@ export function SettingsPage() {
 
   if (loading) return <PageSpinner />
 
+  function handleThemeChange(newMode: ThemeMode) {
+    setMode(newMode)
+  }
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('settings')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('settings')}</h1>
 
       <div className="space-y-6 max-w-md">
         {/* Language Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('language')}</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('language')}</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('languageLabel')}
             </label>
             <div className="flex gap-3">
@@ -78,7 +84,7 @@ export function SettingsPage() {
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   language === 'es'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 {t('spanish')}
@@ -88,7 +94,7 @@ export function SettingsPage() {
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   language === 'en'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 {t('english')}
@@ -97,16 +103,58 @@ export function SettingsPage() {
           </div>
         </div>
 
+        {/* Theme Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('theme')}</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('themeLabel')}
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleThemeChange('light')}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  mode === 'light'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {t('themeLight')}
+              </button>
+              <button
+                onClick={() => handleThemeChange('dark')}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  mode === 'dark'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {t('themeDark')}
+              </button>
+              <button
+                onClick={() => handleThemeChange('system')}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  mode === 'system'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {t('themeSystem')}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Dollar Rate Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('dollarRateTitle')}</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dollarRateTitle')}</h2>
 
           {settings && (
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-3xl font-bold text-blue-700">
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
                 $ {parseFloat(dollarRate).toFixed(2)}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {t('lastUpdated')} {formatDateTime(settings.updated_at)}
               </p>
             </div>
@@ -114,7 +162,7 @@ export function SettingsPage() {
 
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label htmlFor="dollarRate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="dollarRate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('newRate')}
               </label>
               <input
@@ -124,7 +172,7 @@ export function SettingsPage() {
                 value={dollarRate}
                 onChange={(e) => setDollarRate(normalizeNumberInput(e.target.value))}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
 

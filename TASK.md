@@ -164,5 +164,5 @@ src/
 
 
 ### Phase 20: Dark mode
-- [ ] Add dark mode
-- [ ] There should be an option in settings where the user can manually set the mode or let it be according to whatever the system has it set to
+- [x] Add dark mode
+- [x] There should be an option in settings where the user can manually set the mode or let it be according to whatever the system has it set to

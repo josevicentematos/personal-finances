@@ -203,19 +203,19 @@ export function AccountsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('accounts')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('accounts')}</h1>
         <div className="text-right">
-          <p className="text-sm text-gray-500">{t('mainAccountsBalance')}</p>
-          <p className="text-xl font-semibold text-gray-900">{formatCurrency(totalBalance)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('mainAccountsBalance')}</p>
+          <p className="text-xl font-semibold text-gray-900 dark:text-white">{formatCurrency(totalBalance)}</p>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           {errorMessage}
           <button
             onClick={() => setErrorMessage(null)}
-            className="ml-4 text-red-500 hover:text-red-700"
+            className="ml-4 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
           >
             {t('dismiss')}
           </button>
@@ -223,7 +223,7 @@ export function AccountsPage() {
       )}
 
       {/* Add Account Form */}
-      <form onSubmit={handleAdd} className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
@@ -231,7 +231,7 @@ export function AccountsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <input
             type="text"
@@ -239,7 +239,7 @@ export function AccountsPage() {
             placeholder={t('initialBalance')}
             value={newBalance}
             onChange={(e) => setNewBalance(normalizeNumberInput(e.target.value))}
-            className="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <button
             type="submit"
@@ -258,31 +258,31 @@ export function AccountsPage() {
           description={t('addFirstAccount')}
         />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <DragHandleHeader />
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('main')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('name')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('balance')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 <SortableContext
                   items={accounts.map((a) => a.id)}
                   strategy={verticalListSortingStrategy}
@@ -297,25 +297,25 @@ export function AccountsPage() {
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {editingNameId === account.id ? (
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="px-2 py-1 border border-gray-300 rounded"
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                               autoFocus
                             />
                             <button
                               onClick={confirmEditName}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                               {t('save')}
                             </button>
                             <button
                               onClick={cancelEditName}
-                              className="text-gray-500 hover:text-gray-700"
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                               {t('cancel')}
                             </button>
@@ -332,18 +332,18 @@ export function AccountsPage() {
                               inputMode="decimal"
                               value={editBalance}
                               onChange={(e) => setEditBalance(normalizeNumberInput(e.target.value))}
-                              className="w-32 px-2 py-1 border border-gray-300 rounded text-right"
+                              className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                               autoFocus
                             />
                             <button
                               onClick={() => handleUpdateBalance(account.id)}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                               {t('save')}
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
-                              className="text-gray-500 hover:text-gray-700"
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                               {t('cancel')}
                             </button>
@@ -355,7 +355,7 @@ export function AccountsPage() {
                               setEditBalance(account.balance.toString())
                             }}
                             className={`cursor-pointer hover:underline ${
-                              account.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                              account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                             }`}
                           >
                             {formatCurrency(account.balance)}
@@ -365,14 +365,14 @@ export function AccountsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
                         <button
                           onClick={() => startEditName(account)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           disabled={editingNameId !== null}
                         >
                           {t('edit')}
                         </button>
                         <button
                           onClick={() => setDeleteId(account.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                         >
                           {t('delete')}
                         </button>

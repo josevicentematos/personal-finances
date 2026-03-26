@@ -118,7 +118,7 @@ export function TransactionsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('transactions')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('transactions')}</h1>
         <button
           onClick={() => setShowForm(true)}
           className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -130,15 +130,15 @@ export function TransactionsPage() {
       {/* Month Tabs */}
       {monthOptions.length > 0 && (
         <div className="mb-4 overflow-x-auto">
-          <div className="flex gap-1 border-b border-gray-200 min-w-max">
+          <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 min-w-max">
             {monthOptions.map((month) => (
               <button
                 key={month}
                 onClick={() => setActiveMonth(month)}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeMonth === month
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 {formatMonthLabel(month)}
@@ -149,12 +149,12 @@ export function TransactionsPage() {
       )}
 
       {/* Additional Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={filterAccount}
             onChange={(e) => setFilterAccount(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="">{t('allAccounts')}</option>
             {accounts.map((a) => (
@@ -166,7 +166,7 @@ export function TransactionsPage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="">{t('allCategories')}</option>
             {categories.map((c) => (
@@ -181,7 +181,7 @@ export function TransactionsPage() {
                 setFilterAccount('')
                 setFilterCategory('')
               }}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
+              className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
               {t('clearFilters')}
             </button>
@@ -203,68 +203,68 @@ export function TransactionsPage() {
           description={t('adjustFilters')}
         />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('date')}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('description')}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('category')}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('account')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('expense')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('income')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('rate')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredTransactions.map((tx) => (
                 <tr
                   key={tx.id}
                   className="hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: tx.category?.color || '#FFFFFF' }}
+                  style={{ backgroundColor: tx.category?.color || 'transparent' }}
                 >
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
                     {formatDate(tx.date)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-900 max-w-xs truncate">
                     {tx.description}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700">
                     {tx.category?.name ?? '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700">
                     {tx.account?.name ?? '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-700">
                     {tx.expense ? formatCurrency(tx.expense) : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-700">
                     {tx.income ? formatCurrency(tx.income) : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-600">
                     {tx.dollar_rate.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                     <button
                       onClick={() => setDeleteId(tx.id)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 dark:text-red-700 hover:text-red-800"
                     >
                       {t('delete')}
                     </button>

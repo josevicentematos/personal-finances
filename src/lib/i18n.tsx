@@ -95,6 +95,11 @@ const translations = {
     languageLabel: 'App Language',
     english: 'English',
     spanish: 'Spanish',
+    theme: 'Theme',
+    themeLabel: 'App Theme',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    themeSystem: 'System',
 
     // Summary page
     summary: 'Summary',
@@ -231,6 +236,11 @@ const translations = {
     languageLabel: 'Idioma de la App',
     english: 'Ingles',
     spanish: 'Espanol',
+    theme: 'Tema',
+    themeLabel: 'Tema de la App',
+    themeLight: 'Claro',
+    themeDark: 'Oscuro',
+    themeSystem: 'Sistema',
 
     // Summary page
     summary: 'Resumen',
