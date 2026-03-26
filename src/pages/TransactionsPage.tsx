@@ -226,7 +226,7 @@ export function TransactionsPage() {
                   {t('income')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  {t('rate')}
+                  {t('balance')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('actions')}
@@ -259,7 +259,7 @@ export function TransactionsPage() {
                     {tx.income ? formatCurrency(tx.income) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-600">
-                    {tx.dollar_rate.toFixed(2)}
+                    {tx.balance_snapshot !== null ? formatCurrency(tx.balance_snapshot) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                     <button

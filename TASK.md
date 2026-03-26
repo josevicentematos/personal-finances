@@ -166,3 +166,7 @@ src/
 ### Phase 20: Dark mode
 - [x] Add dark mode
 - [x] There should be an option in settings where the user can manually set the mode or let it be according to whatever the system has it set to
+
+### Phase 21: Movements table
+- [x] Type or Tipo (as it looks in spanish) should not be in the movements table visible to the user. Hide it from the UI.
+- [x] Add a new field instead that would "snapshot" the balance in the moment that movement was added. For example: if an account A has 1000 UYU, and then I do an expense of 500 that new field should snapshot the difference in that moment. Which would be 500 UYU.

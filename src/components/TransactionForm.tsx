@@ -64,6 +64,11 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     const expenseAmount = expense ? parseFloat(expense) : null
     const incomeAmount = income ? parseFloat(income) : null
 
+    // Calculate new balance for snapshot
+    const account = accounts.find((a) => a.id === accountId)
+    const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
+    const newBalance = account ? account.balance + balanceChange : null
+
     const { error: txError } = await supabase.from('transactions').insert({
       date,
       description,
@@ -72,6 +77,7 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
       expense: expenseAmount,
       income: incomeAmount,
       dollar_rate: parseFloat(dollarRate),
+      balance_snapshot: newBalance,
     })
 
     if (txError) {
@@ -81,12 +87,10 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     }
 
     // Update account balance
-    const account = accounts.find((a) => a.id === accountId)
-    if (account) {
-      const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
+    if (account && newBalance !== null) {
       const { error: updateError } = await supabase
         .from('accounts')
-        .update({ balance: account.balance + balanceChange })
+        .update({ balance: newBalance })
         .eq('id', accountId)
 
       if (updateError) {

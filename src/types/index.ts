@@ -24,6 +24,7 @@ export interface Transaction {
   expense: number | null
   income: number | null
   dollar_rate: number
+  balance_snapshot: number | null
   created_at: string
 }
 

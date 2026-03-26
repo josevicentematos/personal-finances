@@ -27,6 +27,7 @@ CREATE TABLE transactions (
   expense NUMERIC(15, 2),
   income NUMERIC(15, 2),
   dollar_rate NUMERIC(10, 2) NOT NULL,
+  balance_snapshot NUMERIC(15, 2),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
