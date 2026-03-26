@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Account, Category } from '@/types'
 import { useTranslation } from '@/lib/i18n'
+import { normalizeNumberInput } from '@/lib/format'
 
 interface TransactionFormProps {
   isOpen: boolean
@@ -133,10 +134,10 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
                     {t('dollarRate')}
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={dollarRate}
-                    onChange={(e) => setDollarRate(e.target.value)}
-                    step="0.01"
+                    onChange={(e) => setDollarRate(normalizeNumberInput(e.target.value))}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
@@ -193,11 +194,10 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
                     {t('expenseAmount')}
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={expense}
-                    onChange={(e) => setExpense(e.target.value)}
-                    step="0.01"
-                    min="0"
+                    onChange={(e) => setExpense(normalizeNumberInput(e.target.value))}
                     placeholder="0.00"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
@@ -207,11 +207,10 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
                     {t('incomeAmount')}
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={income}
-                    onChange={(e) => setIncome(e.target.value)}
-                    step="0.01"
-                    min="0"
+                    onChange={(e) => setIncome(normalizeNumberInput(e.target.value))}
                     placeholder="0.00"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />

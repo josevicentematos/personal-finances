@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Account } from '@/types'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, normalizeNumberInput } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -234,11 +234,11 @@ export function AccountsPage() {
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
           />
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder={t('initialBalance')}
             value={newBalance}
-            onChange={(e) => setNewBalance(e.target.value)}
-            step="0.01"
+            onChange={(e) => setNewBalance(normalizeNumberInput(e.target.value))}
             className="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
           />
           <button
@@ -328,10 +328,10 @@ export function AccountsPage() {
                         {editingId === account.id ? (
                           <div className="flex items-center justify-end gap-2">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               value={editBalance}
-                              onChange={(e) => setEditBalance(e.target.value)}
-                              step="0.01"
+                              onChange={(e) => setEditBalance(normalizeNumberInput(e.target.value))}
                               className="w-32 px-2 py-1 border border-gray-300 rounded text-right"
                               autoFocus
                             />

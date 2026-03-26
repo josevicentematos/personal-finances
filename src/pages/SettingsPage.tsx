@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AppSettings } from '@/types'
 import { PageSpinner } from '@/components/Spinner'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime, normalizeNumberInput } from '@/lib/format'
 import { useTranslation, Language } from '@/lib/i18n'
 
 export function SettingsPage() {
@@ -119,11 +119,10 @@ export function SettingsPage() {
               </label>
               <input
                 id="dollarRate"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={dollarRate}
-                onChange={(e) => setDollarRate(e.target.value)}
-                step="0.01"
-                min="0"
+                onChange={(e) => setDollarRate(normalizeNumberInput(e.target.value))}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />

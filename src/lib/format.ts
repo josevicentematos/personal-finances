@@ -24,3 +24,9 @@ export function formatDateTime(dateString: string): string {
     minute: '2-digit',
   }).format(new Date(dateString))
 }
+
+export function normalizeNumberInput(value: string): string {
+  // Replace commas with periods to support different number formats
+  // E.g., "200,30" becomes "200.30"
+  return value.replace(/,/g, '.')
+}

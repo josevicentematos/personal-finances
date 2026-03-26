@@ -152,3 +152,17 @@ src/
 
 ### Phase 17: Movements table
 - [x] Delete debit and credit or rename them, these two should now be income and expenses instead
+
+
+### Phase 18: Misc changes
+- [x] "Type" should not be in the movements table, hide it from the user on the web
+- [x] Income or expenses field when adding a number should be able to take any kind of formatted number and convert it to the right one on the fly, this should occur on every instance where a number needs to be inputted. For example: if the user puts in 200,30 this should automatically be converted to 200.30 instead.
+
+### Phase 19: Category changes
+- [ ] Allow the user to have a selection of 15 different pastel colors when creating or editting a category
+- [ ] These colors should be shown in the movements table as the background color of the row. Consider colors that would go well with the design we have right now.
+
+
+### Phase 20: Dark mode
+- [ ] Add dark mode
+- [ ] There should be an option in settings where the user can manually set the mode or let it be according to whatever the system has it set to
