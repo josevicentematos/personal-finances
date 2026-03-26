@@ -1,4 +1,0 @@
-harness = "claude"
-task = "TASK.md"
-iterations = "5"
-dangerous = true
