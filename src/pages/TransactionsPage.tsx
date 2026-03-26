@@ -237,34 +237,36 @@ export function TransactionsPage() {
               {filteredTransactions.map((tx) => (
                 <tr
                   key={tx.id}
-                  className="hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {formatDate(tx.date)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-900 max-w-xs truncate">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate">
                     {tx.description}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700">
+                  <td
+                    className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700"
+                    style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                  >
                     {tx.category?.name ?? '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {tx.account?.name ?? '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400">
                     {tx.expense ? formatCurrency(tx.expense) : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400">
                     {tx.income ? formatCurrency(tx.income) : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
                     {tx.balance_snapshot !== null ? formatCurrency(tx.balance_snapshot) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                     <button
                       onClick={() => setDeleteId(tx.id)}
-                      className="text-red-600 dark:text-red-700 hover:text-red-800"
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                     >
                       {t('delete')}
                     </button>
