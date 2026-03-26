@@ -164,23 +164,25 @@ export function SummaryPage() {
                 {recentTransactions.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {formatDate(tx.date)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate">
                       {tx.description}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    <td
+                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700"
+                      style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                    >
                       {tx.category?.name ?? '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                       {tx.expense ? (
-                        <span className="text-red-600 dark:text-red-700">-{formatCurrency(tx.expense)}</span>
+                        <span className="text-red-600 dark:text-red-400">-{formatCurrency(tx.expense)}</span>
                       ) : tx.income ? (
-                        <span className="text-green-600 dark:text-green-700">+{formatCurrency(tx.income)}</span>
+                        <span className="text-green-600 dark:text-green-400">+{formatCurrency(tx.income)}</span>
                       ) : (
                         '-'
                       )}
