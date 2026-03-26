@@ -50,14 +50,14 @@ export function SummaryPage() {
     const expenseMap = new Map<string, CategoryExpense>()
 
     currentMonthTransactions.forEach((tx) => {
-      if (tx.debit && tx.category) {
+      if (tx.expense && tx.category) {
         const existing = expenseMap.get(tx.category_id)
         if (existing) {
-          existing.total += tx.debit
+          existing.total += tx.expense
         } else {
           expenseMap.set(tx.category_id, {
             category: tx.category,
-            total: tx.debit,
+            total: tx.expense,
           })
         }
       }
@@ -166,10 +166,10 @@ export function SummaryPage() {
                       {tx.category?.name ?? '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
-                      {tx.debit ? (
-                        <span className="text-red-600">-{formatCurrency(tx.debit)}</span>
-                      ) : tx.credit ? (
-                        <span className="text-green-600">+{formatCurrency(tx.credit)}</span>
+                      {tx.expense ? (
+                        <span className="text-red-600">-{formatCurrency(tx.expense)}</span>
+                      ) : tx.income ? (
+                        <span className="text-green-600">+{formatCurrency(tx.income)}</span>
                       ) : (
                         '-'
                       )}

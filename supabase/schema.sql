@@ -23,8 +23,8 @@ CREATE TABLE transactions (
   description TEXT NOT NULL,
   category_id UUID NOT NULL REFERENCES categories(id),
   account_id UUID NOT NULL REFERENCES accounts(id),
-  debit NUMERIC(15, 2),
-  credit NUMERIC(15, 2),
+  expense NUMERIC(15, 2),
+  income NUMERIC(15, 2),
   dollar_rate NUMERIC(10, 2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

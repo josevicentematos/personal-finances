@@ -20,8 +20,8 @@ export interface Transaction {
   description: string
   category_id: string
   account_id: string
-  debit: number | null
-  credit: number | null
+  expense: number | null
+  income: number | null
   dollar_rate: number
   created_at: string
 }

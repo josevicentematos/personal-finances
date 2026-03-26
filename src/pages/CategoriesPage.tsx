@@ -23,8 +23,8 @@ import {
 } from '@dnd-kit/sortable'
 
 interface CategoryWithTotals extends Category {
-  total_debit: number
-  total_credit: number
+  total_expense: number
+  total_income: number
 }
 
 export function CategoriesPage() {
@@ -65,7 +65,7 @@ export function CategoriesPage() {
 
     const { data: transactions, error: txError } = await supabase
       .from('transactions')
-      .select('category_id, debit, credit')
+      .select('category_id, expense, income')
 
     if (txError) {
       console.error('Error fetching transactions:', txError)
@@ -75,8 +75,8 @@ export function CategoriesPage() {
       const catTransactions = (transactions ?? []).filter((t) => t.category_id === cat.id)
       return {
         ...cat,
-        total_debit: catTransactions.reduce((sum, t) => sum + (t.debit ?? 0), 0),
-        total_credit: catTransactions.reduce((sum, t) => sum + (t.credit ?? 0), 0),
+        total_expense: catTransactions.reduce((sum, t) => sum + (t.expense ?? 0), 0),
+        total_income: catTransactions.reduce((sum, t) => sum + (t.income ?? 0), 0),
       }
     })
 
@@ -252,10 +252,10 @@ export function CategoriesPage() {
                     {t('name')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('totalDebited')}
+                    {t('categoryTotalExpenses')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('totalCredited')}
+                    {t('categoryTotalIncome')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {t('actions')}
@@ -297,10 +297,10 @@ export function CategoriesPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">
-                        {formatCurrency(category.total_debit)}
+                        {formatCurrency(category.total_expense)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">
-                        {formatCurrency(category.total_credit)}
+                        {formatCurrency(category.total_income)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
                         <button

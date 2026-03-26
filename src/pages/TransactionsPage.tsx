@@ -59,7 +59,7 @@ export function TransactionsPage() {
     // Reverse the balance change
     const account = accounts.find((a) => a.id === tx.account_id)
     if (account) {
-      const reverseChange = (tx.debit ?? 0) - (tx.credit ?? 0)
+      const reverseChange = (tx.expense ?? 0) - (tx.income ?? 0)
       await supabase
         .from('accounts')
         .update({ balance: account.balance + reverseChange })
@@ -220,10 +220,10 @@ export function TransactionsPage() {
                   {t('account')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('debit')}
+                  {t('expense')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('credit')}
+                  {t('income')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('rate')}
@@ -249,10 +249,10 @@ export function TransactionsPage() {
                     {tx.account?.name ?? '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
-                    {tx.debit ? formatCurrency(tx.debit) : '-'}
+                    {tx.expense ? formatCurrency(tx.expense) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
-                    {tx.credit ? formatCurrency(tx.credit) : '-'}
+                    {tx.income ? formatCurrency(tx.income) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
                     {tx.dollar_rate.toFixed(2)}

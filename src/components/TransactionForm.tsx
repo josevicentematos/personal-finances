@@ -20,8 +20,8 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
   const [description, setDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [accountId, setAccountId] = useState('')
-  const [debit, setDebit] = useState('')
-  const [credit, setCredit] = useState('')
+  const [expense, setExpense] = useState('')
+  const [income, setIncome] = useState('')
   const [dollarRate, setDollarRate] = useState('')
 
   const fetchData = useCallback(async () => {
@@ -60,16 +60,16 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     e.preventDefault()
     setSubmitting(true)
 
-    const debitAmount = debit ? parseFloat(debit) : null
-    const creditAmount = credit ? parseFloat(credit) : null
+    const expenseAmount = expense ? parseFloat(expense) : null
+    const incomeAmount = income ? parseFloat(income) : null
 
     const { error: txError } = await supabase.from('transactions').insert({
       date,
       description,
       category_id: categoryId,
       account_id: accountId,
-      debit: debitAmount,
-      credit: creditAmount,
+      expense: expenseAmount,
+      income: incomeAmount,
       dollar_rate: parseFloat(dollarRate),
     })
 
@@ -82,7 +82,7 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     // Update account balance
     const account = accounts.find((a) => a.id === accountId)
     if (account) {
-      const balanceChange = (creditAmount ?? 0) - (debitAmount ?? 0)
+      const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
       const { error: updateError } = await supabase
         .from('accounts')
         .update({ balance: account.balance + balanceChange })
@@ -95,8 +95,8 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
 
     // Reset form
     setDescription('')
-    setDebit('')
-    setCredit('')
+    setExpense('')
+    setIncome('')
     setDate(new Date().toISOString().split('T')[0] ?? '')
 
     setSubmitting(false)
@@ -190,12 +190,12 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('debitExpense')}
+                    {t('expenseAmount')}
                   </label>
                   <input
                     type="number"
-                    value={debit}
-                    onChange={(e) => setDebit(e.target.value)}
+                    value={expense}
+                    onChange={(e) => setExpense(e.target.value)}
                     step="0.01"
                     min="0"
                     placeholder="0.00"
@@ -204,12 +204,12 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('creditIncome')}
+                    {t('incomeAmount')}
                   </label>
                   <input
                     type="number"
-                    value={credit}
-                    onChange={(e) => setCredit(e.target.value)}
+                    value={income}
+                    onChange={(e) => setIncome(e.target.value)}
                     step="0.01"
                     min="0"
                     placeholder="0.00"
