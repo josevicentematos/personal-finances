@@ -101,13 +101,20 @@ export function SummaryPage() {
           <div className="space-y-3">
             {categoryExpenses.map((item) => (
               <div key={item.category.id} className="flex items-center gap-3">
-                <div className="w-32 text-sm text-gray-600 truncate flex-shrink-0">
+                <div
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: item.category.color || '#E8F4FD' }}
+                />
+                <div className="w-28 text-sm text-gray-600 truncate flex-shrink-0">
                   {item.category.name}
                 </div>
                 <div className="flex-1 h-8 bg-gray-100 rounded-md overflow-hidden">
                   <div
-                    className="h-full bg-blue-500 rounded-md transition-all duration-300"
-                    style={{ width: `${(item.total / maxExpense) * 100}%` }}
+                    className="h-full rounded-md transition-all duration-300"
+                    style={{
+                      width: `${(item.total / maxExpense) * 100}%`,
+                      backgroundColor: item.category.color || '#3B82F6',
+                    }}
                   />
                 </div>
                 <div className="w-28 text-sm text-gray-900 text-right flex-shrink-0">
@@ -153,9 +160,13 @@ export function SummaryPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
                 {recentTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50">
+                  <tr
+                    key={tx.id}
+                    className="hover:opacity-80 transition-opacity"
+                    style={{ backgroundColor: tx.category?.color || '#FFFFFF' }}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(tx.date)}
                     </td>

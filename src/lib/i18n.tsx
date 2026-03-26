@@ -36,6 +36,7 @@ const translations = {
     name: 'Name',
     amount: 'Amount',
     actions: 'Actions',
+    color: 'Color',
 
     // Accounts page
     accounts: 'Accounts',
@@ -171,6 +172,7 @@ const translations = {
     name: 'Nombre',
     amount: 'Monto',
     actions: 'Acciones',
+    color: 'Color',
 
     // Accounts page
     accounts: 'Cuentas',

@@ -6,6 +6,8 @@ import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
+import { ColorPicker } from '@/components/ColorPicker'
+import { DEFAULT_CATEGORY_COLOR } from '@/lib/colors'
 import { useTranslation } from '@/lib/i18n'
 import {
   DndContext,
@@ -31,10 +33,12 @@ export function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryWithTotals[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteWarning, setDeleteWarning] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
   const [confirmEditId, setConfirmEditId] = useState<string | null>(null)
   const [editWarning, setEditWarning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -92,6 +96,7 @@ export function CategoriesPage() {
 
     const { error } = await supabase.from('categories').insert({
       name: newName,
+      color: newColor,
       sort_order: maxOrder + 1,
     })
 
@@ -99,6 +104,7 @@ export function CategoriesPage() {
       console.error('Error adding category:', error)
     } else {
       setNewName('')
+      setNewColor(DEFAULT_CATEGORY_COLOR)
       fetchCategories()
     }
     setSubmitting(false)
@@ -133,6 +139,7 @@ export function CategoriesPage() {
   function startEdit(category: CategoryWithTotals) {
     setEditingId(category.id)
     setEditName(category.name)
+    setEditColor(category.color || DEFAULT_CATEGORY_COLOR)
   }
 
   async function checkAndConfirmEdit() {
@@ -154,7 +161,7 @@ export function CategoriesPage() {
 
     const { error } = await supabase
       .from('categories')
-      .update({ name: editName })
+      .update({ name: editName, color: editColor })
       .eq('id', confirmEditId)
 
     if (error) {
@@ -168,6 +175,7 @@ export function CategoriesPage() {
   function cancelEdit() {
     setEditingId(null)
     setEditName('')
+    setEditColor(DEFAULT_CATEGORY_COLOR)
     setConfirmEditId(null)
     setEditWarning(false)
   }
@@ -212,22 +220,30 @@ export function CategoriesPage() {
 
       {/* Add Category Form */}
       <form onSubmit={handleAdd} className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder={t('categoryName')}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {t('addCategory')}
-          </button>
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder={t('categoryName')}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              required
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {t('addCategory')}
+            </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('color')}
+            </label>
+            <ColorPicker value={newColor} onChange={setNewColor} />
+          </div>
         </div>
       </form>
 
@@ -248,6 +264,9 @@ export function CategoriesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <DragHandleHeader />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('color')}
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {t('name')}
                   </th>
@@ -269,6 +288,18 @@ export function CategoriesPage() {
                 >
                   {categories.map((category) => (
                     <SortableRow key={category.id} id={category.id}>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {editingId === category.id ? (
+                          <div className="w-32">
+                            <ColorPicker value={editColor} onChange={setEditColor} />
+                          </div>
+                        ) : (
+                          <div
+                            className="w-8 h-8 rounded-full border border-gray-200"
+                            style={{ backgroundColor: category.color || DEFAULT_CATEGORY_COLOR }}
+                          />
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {editingId === category.id ? (
                           <div className="flex items-center gap-2">

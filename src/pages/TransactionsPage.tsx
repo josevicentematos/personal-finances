@@ -233,9 +233,13 @@ export function TransactionsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200">
               {filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50">
+                <tr
+                  key={tx.id}
+                  className="hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: tx.category?.color || '#FFFFFF' }}
+                >
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {formatDate(tx.date)}
                   </td>
