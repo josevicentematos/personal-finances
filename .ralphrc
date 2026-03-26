@@ -1,4 +1,4 @@
 harness = "claude"
 task = "TASK.md"
-iterations = "2"
+iterations = "5"
 dangerous = true
