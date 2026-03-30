@@ -117,6 +117,25 @@ export function AccountsPage() {
     }
   }
 
+  async function handleToggleShowInSummary(id: string, currentShowInSummary: boolean) {
+    setErrorMessage(null)
+    const { data, error } = await supabase
+      .from('accounts')
+      .update({ show_in_summary: !currentShowInSummary })
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.error('Error toggling show in summary:', error)
+      setErrorMessage(`Failed to update: ${error.message}`)
+    } else if (!data || data.length === 0) {
+      console.error('No rows updated for account:', id)
+      setErrorMessage('Failed to update: No rows were modified.')
+    } else {
+      fetchAccounts()
+    }
+  }
+
   async function handleDelete() {
     if (!deleteId) return
 
@@ -271,6 +290,9 @@ export function AccountsPage() {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('main')}
                   </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('showInSummary')}
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('name')}
                   </th>
@@ -294,6 +316,14 @@ export function AccountsPage() {
                           type="checkbox"
                           checked={account.is_main ?? false}
                           onChange={() => handleToggleMain(account.id, account.is_main ?? false)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <input
+                          type="checkbox"
+                          checked={account.show_in_summary ?? false}
+                          onChange={() => handleToggleShowInSummary(account.id, account.show_in_summary ?? false)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       </td>

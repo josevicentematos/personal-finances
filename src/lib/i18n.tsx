@@ -47,6 +47,7 @@ const translations = {
     noAccountsYet: 'No accounts yet',
     addFirstAccount: 'Add your first account to get started',
     main: 'Main',
+    showInSummary: 'Summary',
     balance: 'Balance',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Are you sure you want to delete this account? This action cannot be undone.',
@@ -103,6 +104,8 @@ const translations = {
 
     // Summary page
     summary: 'Summary',
+    accountBalances: 'Account Balances',
+    totalBalance: 'Total Balance',
     expensesFor: 'Expenses for',
     noExpensesThisMonth: 'No expenses this month',
     totalExpenses: 'Total Expenses',
@@ -132,7 +135,9 @@ const translations = {
 
     // Transaction form
     newTransaction: 'New Transaction',
+    editTransaction: 'Edit Transaction',
     dollarRate: 'Dollar Rate',
+    usdEquivalent: 'USD',
     expenseAmount: 'Expense',
     incomeAmount: 'Income',
     liquidAvailable: 'Liquid (immediately available)',
@@ -188,6 +193,7 @@ const translations = {
     noAccountsYet: 'Sin cuentas aun',
     addFirstAccount: 'Agrega tu primera cuenta para comenzar',
     main: 'Principal',
+    showInSummary: 'Resumen',
     balance: 'Saldo',
     deleteAccount: 'Eliminar Cuenta',
     deleteAccountConfirm: 'Estas seguro que deseas eliminar esta cuenta? Esta accion no se puede deshacer.',
@@ -244,6 +250,8 @@ const translations = {
 
     // Summary page
     summary: 'Resumen',
+    accountBalances: 'Saldos de Cuentas',
+    totalBalance: 'Saldo Total',
     expensesFor: 'Gastos de',
     noExpensesThisMonth: 'Sin gastos este mes',
     totalExpenses: 'Total Gastos',
@@ -273,7 +281,9 @@ const translations = {
 
     // Transaction form
     newTransaction: 'Nuevo Movimiento',
+    editTransaction: 'Editar Movimiento',
     dollarRate: 'Tipo de Cambio',
+    usdEquivalent: 'USD',
     expenseAmount: 'Gasto',
     incomeAmount: 'Ingreso',
     liquidAvailable: 'Liquido (disponible inmediatamente)',

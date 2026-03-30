@@ -3,6 +3,7 @@ export interface Account {
   name: string
   balance: number
   is_main: boolean
+  show_in_summary: boolean
   sort_order: number
   created_at: string
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Account, Category } from '@/types'
+import { Account, Category, Transaction } from '@/types'
 import { useTranslation } from '@/lib/i18n'
 import { normalizeNumberInput } from '@/lib/format'
 
@@ -8,9 +8,10 @@ interface TransactionFormProps {
   isOpen: boolean
   onClose: () => void
   onSaved: () => void
+  editTransaction?: Transaction | null
 }
 
-export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormProps) {
+export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: TransactionFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,6 +25,9 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
   const [expense, setExpense] = useState('')
   const [income, setIncome] = useState('')
   const [dollarRate, setDollarRate] = useState('')
+  const [originalAccountId, setOriginalAccountId] = useState<string | null>(null)
+  const [originalExpense, setOriginalExpense] = useState<number | null>(null)
+  const [originalIncome, setOriginalIncome] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -35,21 +39,37 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
 
     if (accountsRes.data) {
       setAccounts(accountsRes.data)
-      if (accountsRes.data.length > 0) {
-        setAccountId((prev) => prev || accountsRes.data[0]?.id || '')
-      }
     }
     if (categoriesRes.data) {
       setCategories(categoriesRes.data)
-      if (categoriesRes.data.length > 0) {
-        setCategoryId((prev) => prev || categoriesRes.data[0]?.id || '')
-      }
     }
     if (settingsRes.data) {
       setDollarRate(settingsRes.data.dollar_rate.toString())
     }
+
+    // If editing, populate form with existing data
+    if (editTransaction) {
+      setDate(editTransaction.date)
+      setDescription(editTransaction.description)
+      setCategoryId(editTransaction.category_id)
+      setAccountId(editTransaction.account_id)
+      setExpense(editTransaction.expense?.toString() ?? '')
+      setIncome(editTransaction.income?.toString() ?? '')
+      setDollarRate(editTransaction.dollar_rate.toString())
+      setOriginalAccountId(editTransaction.account_id)
+      setOriginalExpense(editTransaction.expense)
+      setOriginalIncome(editTransaction.income)
+    } else {
+      // Set defaults for new transaction
+      if (accountsRes.data && accountsRes.data.length > 0) {
+        setAccountId(accountsRes.data[0]?.id || '')
+      }
+      if (categoriesRes.data && categoriesRes.data.length > 0) {
+        setCategoryId(categoriesRes.data[0]?.id || '')
+      }
+    }
     setLoading(false)
-  }, [])
+  }, [editTransaction])
 
   useEffect(() => {
     if (isOpen) {
@@ -64,37 +84,101 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     const expenseAmount = expense ? parseFloat(expense) : null
     const incomeAmount = income ? parseFloat(income) : null
 
-    // Calculate new balance for snapshot
-    const account = accounts.find((a) => a.id === accountId)
-    const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
-    const newBalance = account ? account.balance + balanceChange : null
+    if (editTransaction) {
+      // EDIT MODE: Update existing transaction
+      const account = accounts.find((a) => a.id === accountId)
+      const originalAccount = accounts.find((a) => a.id === originalAccountId)
 
-    const { error: txError } = await supabase.from('transactions').insert({
-      date,
-      description,
-      category_id: categoryId,
-      account_id: accountId,
-      expense: expenseAmount,
-      income: incomeAmount,
-      dollar_rate: parseFloat(dollarRate),
-      balance_snapshot: newBalance,
-    })
+      // Calculate balance adjustments
+      const oldBalanceChange = (originalIncome ?? 0) - (originalExpense ?? 0)
+      const newBalanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
 
-    if (txError) {
-      console.error('Error creating transaction:', txError)
-      setSubmitting(false)
-      return
-    }
+      // If account changed, revert old account and update new account
+      if (originalAccountId !== accountId) {
+        // Revert old account balance
+        if (originalAccount) {
+          const revertedBalance = originalAccount.balance - oldBalanceChange
+          await supabase
+            .from('accounts')
+            .update({ balance: revertedBalance })
+            .eq('id', originalAccountId)
+        }
+        // Update new account balance
+        if (account) {
+          const newBalance = account.balance + newBalanceChange
+          await supabase
+            .from('accounts')
+            .update({ balance: newBalance })
+            .eq('id', accountId)
 
-    // Update account balance
-    if (account && newBalance !== null) {
-      const { error: updateError } = await supabase
-        .from('accounts')
-        .update({ balance: newBalance })
-        .eq('id', accountId)
+          // Update transaction with new balance snapshot
+          await supabase.from('transactions').update({
+            date,
+            description,
+            category_id: categoryId,
+            account_id: accountId,
+            expense: expenseAmount,
+            income: incomeAmount,
+            dollar_rate: parseFloat(dollarRate),
+            balance_snapshot: newBalance,
+          }).eq('id', editTransaction.id)
+        }
+      } else {
+        // Same account, just adjust the difference
+        if (account) {
+          const balanceDiff = newBalanceChange - oldBalanceChange
+          const newBalance = account.balance + balanceDiff
+          await supabase
+            .from('accounts')
+            .update({ balance: newBalance })
+            .eq('id', accountId)
 
-      if (updateError) {
-        console.error('Error updating account balance:', updateError)
+          // Update transaction with new balance snapshot
+          await supabase.from('transactions').update({
+            date,
+            description,
+            category_id: categoryId,
+            account_id: accountId,
+            expense: expenseAmount,
+            income: incomeAmount,
+            dollar_rate: parseFloat(dollarRate),
+            balance_snapshot: newBalance,
+          }).eq('id', editTransaction.id)
+        }
+      }
+    } else {
+      // CREATE MODE: Insert new transaction
+      const account = accounts.find((a) => a.id === accountId)
+      const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
+      const newBalance = account ? account.balance + balanceChange : null
+
+      const { error: txError } = await supabase.from('transactions').insert({
+        date,
+        description,
+        category_id: categoryId,
+        account_id: accountId,
+        expense: expenseAmount,
+        income: incomeAmount,
+        dollar_rate: parseFloat(dollarRate),
+        balance_snapshot: newBalance,
+      })
+
+      if (txError) {
+        console.error('Error creating transaction:', txError)
+        setSubmitting(false)
+        return
+      }
+
+      // Update account balance
+      if (account && newBalance !== null) {
+        const { error: updateError } = await supabase
+          .from('accounts')
+          .update({ balance: newBalance })
+          .eq('id', accountId)
+
+        if (updateError) {
+          console.error('Error updating account balance:', updateError)
+        }
       }
     }
 
@@ -103,6 +187,9 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
     setExpense('')
     setIncome('')
     setDate(new Date().toISOString().split('T')[0] ?? '')
+    setOriginalAccountId(null)
+    setOriginalExpense(null)
+    setOriginalIncome(null)
 
     setSubmitting(false)
     onSaved()
@@ -116,36 +203,23 @@ export function TransactionForm({ isOpen, onClose, onSaved }: TransactionFormPro
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/50" onClick={onClose} />
         <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('newTransaction')}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            {editTransaction ? t('editTransaction') : t('newTransaction')}
+          </h2>
 
           {loading ? (
             <div className="py-8 text-center text-gray-500 dark:text-gray-400">{t('loading')}</div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('dollarRate')}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={dollarRate}
-                    onChange={(e) => setDollarRate(normalizeNumberInput(e.target.value))}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
               </div>
 
               <div>

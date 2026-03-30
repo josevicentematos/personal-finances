@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { TransactionWithRelations, Category } from '@/types'
+import { TransactionWithRelations, Category, Account } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { useTranslation } from '@/lib/i18n'
@@ -12,6 +12,7 @@ interface CategoryExpense {
 
 export function SummaryPage() {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const { t } = useTranslation()
 
@@ -20,19 +21,36 @@ export function SummaryPage() {
   }, [])
 
   async function fetchData() {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*, category:categories(*), account:accounts(*)')
-      .order('date', { ascending: false })
+    const [txRes, accRes] = await Promise.all([
+      supabase
+        .from('transactions')
+        .select('*, category:categories(*), account:accounts(*)')
+        .order('date', { ascending: false }),
+      supabase
+        .from('accounts')
+        .select('*')
+        .order('sort_order', { ascending: true }),
+    ])
 
-    if (error) {
-      console.error('Error fetching transactions:', error)
+    if (txRes.error) {
+      console.error('Error fetching transactions:', txRes.error)
     } else {
-      setTransactions(data ?? [])
+      setTransactions(txRes.data ?? [])
+    }
+
+    if (accRes.error) {
+      console.error('Error fetching accounts:', accRes.error)
+    } else {
+      setAccounts(accRes.data ?? [])
     }
 
     setLoading(false)
   }
+
+  // Get accounts to show in summary
+  const summaryAccounts = useMemo(() => {
+    return accounts.filter((acc) => acc.show_in_summary)
+  }, [accounts])
 
   // Get current month in YYYY-MM format
   const currentMonth = useMemo(() => {
@@ -76,6 +94,11 @@ export function SummaryPage() {
     return transactions.slice(0, 5)
   }, [transactions])
 
+  // Calculate total balance of summary accounts
+  const totalSummaryBalance = useMemo(() => {
+    return summaryAccounts.reduce((sum, acc) => sum + acc.balance, 0)
+  }, [summaryAccounts])
+
   // Format month for display
   function formatMonthLabel(monthStr: string): string {
     const [year, month] = monthStr.split('-')
@@ -88,6 +111,41 @@ export function SummaryPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('summary')}</h1>
+
+      {/* Account Balances */}
+      {summaryAccounts.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('accountBalances')}</h2>
+          <div className="space-y-3">
+            {summaryAccounts.map((account) => (
+              <div key={account.id} className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">{account.name}</span>
+                <span
+                  className={`text-sm font-medium ${
+                    account.balance >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatCurrency(account.balance)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{t('totalBalance')}</span>
+            <span
+              className={`font-bold ${
+                totalSummaryBalance >= 0
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+              }`}
+            >
+              {formatCurrency(totalSummaryBalance)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Monthly Expenses Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">

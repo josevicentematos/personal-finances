@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { TransactionWithRelations, Account, Category } from '@/types'
+import { TransactionWithRelations, Account, Category, Transaction } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -8,12 +8,22 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { TransactionForm } from '@/components/TransactionForm'
 import { useTranslation } from '@/lib/i18n'
 
+function formatUSD(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
 export function TransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { t } = useTranslation()
 
@@ -229,6 +239,9 @@ export function TransactionsPage() {
                   {t('balance')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {t('usdEquivalent')}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('actions')}
                 </th>
               </tr>
@@ -263,7 +276,23 @@ export function TransactionsPage() {
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
                     {tx.balance_snapshot !== null ? formatCurrency(tx.balance_snapshot) : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
+                    {tx.expense
+                      ? formatUSD(tx.expense / tx.dollar_rate)
+                      : tx.income
+                        ? formatUSD(tx.income / tx.dollar_rate)
+                        : '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm space-x-2">
+                    <button
+                      onClick={() => {
+                        setEditingTransaction(tx)
+                        setShowForm(true)
+                      }}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    >
+                      {t('edit')}
+                    </button>
                     <button
                       onClick={() => setDeleteId(tx.id)}
                       className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
@@ -280,8 +309,12 @@ export function TransactionsPage() {
 
       <TransactionForm
         isOpen={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => {
+          setShowForm(false)
+          setEditingTransaction(null)
+        }}
         onSaved={fetchData}
+        editTransaction={editingTransaction}
       />
 
       <ConfirmDialog
