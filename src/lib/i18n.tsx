@@ -106,6 +106,7 @@ const translations = {
     summary: 'Summary',
     accountBalances: 'Account Balances',
     totalBalance: 'Total Balance',
+    realBalance: 'Real Balance',
     expensesFor: 'Expenses for',
     noExpensesThisMonth: 'No expenses this month',
     totalExpenses: 'Total Expenses',
@@ -143,6 +144,8 @@ const translations = {
     liquidAvailable: 'Liquid (immediately available)',
     savingDots: 'Saving...',
     saveTransaction: 'Save Transaction',
+    recurringPayment: 'Recurring Payment',
+    selectRecurringPayment: 'Select a recurring payment (optional)',
 
     // Error boundary
     somethingWentWrong: 'Something went wrong',
@@ -252,6 +255,7 @@ const translations = {
     summary: 'Resumen',
     accountBalances: 'Saldos de Cuentas',
     totalBalance: 'Saldo Total',
+    realBalance: 'Saldo Real',
     expensesFor: 'Gastos de',
     noExpensesThisMonth: 'Sin gastos este mes',
     totalExpenses: 'Total Gastos',
@@ -289,6 +293,8 @@ const translations = {
     liquidAvailable: 'Liquido (disponible inmediatamente)',
     savingDots: 'Guardando...',
     saveTransaction: 'Guardar Movimiento',
+    recurringPayment: 'Pago Recurrente',
+    selectRecurringPayment: 'Seleccionar un pago recurrente (opcional)',
 
     // Error boundary
     somethingWentWrong: 'Algo salio mal',

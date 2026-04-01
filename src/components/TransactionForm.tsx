@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Account, Category, Transaction } from '@/types'
+import { Account, Category, Transaction, RecurringPayment } from '@/types'
 import { useTranslation } from '@/lib/i18n'
 import { normalizeNumberInput } from '@/lib/format'
 
@@ -14,6 +14,7 @@ interface TransactionFormProps {
 export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: TransactionFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
@@ -25,16 +26,18 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
   const [expense, setExpense] = useState('')
   const [income, setIncome] = useState('')
   const [dollarRate, setDollarRate] = useState('')
+  const [selectedRecurringPaymentId, setSelectedRecurringPaymentId] = useState<string>('')
   const [originalAccountId, setOriginalAccountId] = useState<string | null>(null)
   const [originalExpense, setOriginalExpense] = useState<number | null>(null)
   const [originalIncome, setOriginalIncome] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [accountsRes, categoriesRes, settingsRes] = await Promise.all([
+    const [accountsRes, categoriesRes, settingsRes, recurringRes] = await Promise.all([
       supabase.from('accounts').select('*').order('sort_order', { ascending: true }),
       supabase.from('categories').select('*').order('sort_order', { ascending: true }),
       supabase.from('app_settings').select('dollar_rate').single(),
+      supabase.from('recurring_payments').select('*').eq('is_paid', false).order('sort_order', { ascending: true }),
     ])
 
     if (accountsRes.data) {
@@ -45,6 +48,9 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
     }
     if (settingsRes.data) {
       setDollarRate(settingsRes.data.dollar_rate.toString())
+    }
+    if (recurringRes.data) {
+      setRecurringPayments(recurringRes.data)
     }
 
     // If editing, populate form with existing data
@@ -76,6 +82,18 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
       fetchData()
     }
   }, [isOpen, fetchData])
+
+  function handleRecurringPaymentSelect(paymentId: string) {
+    setSelectedRecurringPaymentId(paymentId)
+    if (paymentId) {
+      const payment = recurringPayments.find((p) => p.id === paymentId)
+      if (payment) {
+        setDescription(payment.name)
+        setExpense(payment.amount.toString())
+        setIncome('')
+      }
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -180,6 +198,14 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
           console.error('Error updating account balance:', updateError)
         }
       }
+
+      // Mark recurring payment as paid if one was selected
+      if (selectedRecurringPaymentId) {
+        await supabase
+          .from('recurring_payments')
+          .update({ is_paid: true })
+          .eq('id', selectedRecurringPaymentId)
+      }
     }
 
     // Reset form
@@ -187,6 +213,7 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
     setExpense('')
     setIncome('')
     setDate(new Date().toISOString().split('T')[0] ?? '')
+    setSelectedRecurringPaymentId('')
     setOriginalAccountId(null)
     setOriginalExpense(null)
     setOriginalIncome(null)
@@ -211,6 +238,24 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
             <div className="py-8 text-center text-gray-500 dark:text-gray-400">{t('loading')}</div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!editTransaction && recurringPayments.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('recurringPayment')}</label>
+                  <select
+                    value={selectedRecurringPaymentId}
+                    onChange={(e) => handleRecurringPaymentSelect(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">{t('selectRecurringPayment')}</option>
+                    {recurringPayments.map((payment) => (
+                      <option key={payment.id} value={payment.id}>
+                        {payment.name} - ${payment.amount.toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
                 <input

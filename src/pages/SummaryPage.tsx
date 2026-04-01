@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { TransactionWithRelations, Category, Account, AppSettings } from '@/types'
+import { TransactionWithRelations, Category, Account, AppSettings, RecurringPayment } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { useTranslation } from '@/lib/i18n'
@@ -22,6 +22,7 @@ interface CategoryExpense {
 export function SummaryPage() {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([])
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const { t } = useTranslation()
@@ -31,7 +32,7 @@ export function SummaryPage() {
   }, [])
 
   async function fetchData() {
-    const [txRes, accRes, settingsRes] = await Promise.all([
+    const [txRes, accRes, settingsRes, recurringRes] = await Promise.all([
       supabase
         .from('transactions')
         .select('*, category:categories(*), account:accounts(*)')
@@ -44,6 +45,10 @@ export function SummaryPage() {
         .from('app_settings')
         .select('*')
         .single(),
+      supabase
+        .from('recurring_payments')
+        .select('*')
+        .eq('is_paid', false),
     ])
 
     if (txRes.error) {
@@ -62,6 +67,12 @@ export function SummaryPage() {
       console.error('Error fetching settings:', settingsRes.error)
     } else {
       setSettings(settingsRes.data)
+    }
+
+    if (recurringRes.error) {
+      console.error('Error fetching recurring payments:', recurringRes.error)
+    } else {
+      setRecurringPayments(recurringRes.data ?? [])
     }
 
     setLoading(false)
@@ -119,6 +130,21 @@ export function SummaryPage() {
     return summaryAccounts.reduce((sum, acc) => sum + acc.balance, 0)
   }, [summaryAccounts])
 
+  // Calculate main accounts balance
+  const mainAccountsBalance = useMemo(() => {
+    return accounts.filter((acc) => acc.is_main).reduce((sum, acc) => sum + acc.balance, 0)
+  }, [accounts])
+
+  // Calculate unpaid recurring payments total
+  const unpaidRecurringTotal = useMemo(() => {
+    return recurringPayments.reduce((sum, p) => sum + p.amount, 0)
+  }, [recurringPayments])
+
+  // Calculate real balance (main accounts - unpaid recurring)
+  const realBalance = useMemo(() => {
+    return mainAccountsBalance - unpaidRecurringTotal
+  }, [mainAccountsBalance, unpaidRecurringTotal])
+
   // Get current dollar rate
   const currentDollarRate = settings?.dollar_rate ?? 1
 
@@ -126,6 +152,11 @@ export function SummaryPage() {
   const totalSummaryBalanceUSD = useMemo(() => {
     return totalSummaryBalance / currentDollarRate
   }, [totalSummaryBalance, currentDollarRate])
+
+  // Calculate real balance in USD
+  const realBalanceUSD = useMemo(() => {
+    return realBalance / currentDollarRate
+  }, [realBalance, currentDollarRate])
 
   // Format month for display
   function formatMonthLabel(monthStr: string): string {
@@ -165,21 +196,40 @@ export function SummaryPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-            <span className="font-medium text-gray-700 dark:text-gray-300">{t('totalBalance')}</span>
-            <div className="text-right">
-              <span
-                className={`font-bold ${
-                  totalSummaryBalance >= 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}
-              >
-                {formatCurrency(totalSummaryBalance)}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                ({formatUSD(totalSummaryBalanceUSD)})
-              </span>
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-700 dark:text-gray-300">{t('totalBalance')}</span>
+              <div className="text-right">
+                <span
+                  className={`font-bold ${
+                    totalSummaryBalance >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatCurrency(totalSummaryBalance)}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  ({formatUSD(totalSummaryBalanceUSD)})
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-700 dark:text-gray-300">{t('realBalance')}</span>
+              <div className="text-right">
+                <span
+                  className={`font-bold ${
+                    realBalance >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatCurrency(realBalance)}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  ({formatUSD(realBalanceUSD)})
+                </span>
+              </div>
             </div>
           </div>
         </div>

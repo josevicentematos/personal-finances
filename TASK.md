@@ -42,3 +42,13 @@ src/
 - [x] Remove the type of change (tipo de cambio en español) in the form for movement creation
 - [x] Show the result in USD dollar according to the conversion rate of the expense made (or income) in the movements table. Use the value setup to calculate it.
 - [x] In the summary tab show the balance of the accounts. Add a new selector/toggle in the accounts table to allow them to be shown in the summary table. Only the selected/toggled one should be shown
+
+
+### Task 2:
+- [x] Ability to edit recurrent payments
+- [x] Being able to select a recurrent payment from the create movement form, if selected automatically add the amount of the recurrent payment, the name as description and check it as payed automatically once the movement is created
+- [x] Reset recurrent payments each new month
+
+### Task 3:
+- [x] Whenever you edit a movement it gets put at the bottom again, as if it had a new date set. Editing a movement should not move it around the table, whatever timestamp you save in the DB should not be modified when editing a movement.
+- [x] Under "total balance"/"saldo total" in the summary tab, in the balance of the accounts add a new balance that would be the amount of the main account minus the total of the recurrent payments that have not been checked yet. Name this balance "Real balance" in English.

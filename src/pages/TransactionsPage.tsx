@@ -43,7 +43,8 @@ export function TransactionsPage() {
       supabase
         .from('transactions')
         .select('*, category:categories(*), account:accounts(*)')
-        .order('date', { ascending: false }),
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false }),
       supabase.from('accounts').select('*').order('sort_order', { ascending: true }),
       supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     ])
@@ -112,8 +113,12 @@ export function TransactionsPage() {
         if (filterCategory && tx.category_id !== filterCategory) return false
         return true
       })
-      // Sort by date ascending (least recent first within month)
-      .sort((a, b) => a.date.localeCompare(b.date))
+      // Sort by date ascending, then by created_at ascending to maintain stable ordering
+      .sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date)
+        if (dateCompare !== 0) return dateCompare
+        return a.created_at.localeCompare(b.created_at)
+      })
   }, [transactions, activeMonth, filterAccount, filterCategory])
 
   // Format month for display

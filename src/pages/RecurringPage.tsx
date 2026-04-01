@@ -29,6 +29,9 @@ export function RecurringPage() {
   const [newName, setNewName] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editAmount, setEditAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
 
@@ -40,8 +43,27 @@ export function RecurringPage() {
   )
 
   useEffect(() => {
-    fetchData()
+    checkAndResetMonthlyPayments().then(() => fetchData())
   }, [])
+
+  async function checkAndResetMonthlyPayments() {
+    const currentMonth = new Date().toISOString().substring(0, 7) // YYYY-MM format
+    const lastResetMonth = localStorage.getItem('recurring-payments-last-reset')
+
+    if (lastResetMonth !== currentMonth) {
+      // New month - reset all recurring payments to unpaid
+      const { error } = await supabase
+        .from('recurring_payments')
+        .update({ is_paid: false })
+        .eq('is_paid', true)
+
+      if (error) {
+        console.error('Error resetting recurring payments:', error)
+      } else {
+        localStorage.setItem('recurring-payments-last-reset', currentMonth)
+      }
+    }
+  }
 
   async function fetchData() {
     const [paymentsRes, accountsRes] = await Promise.all([
@@ -111,6 +133,39 @@ export function RecurringPage() {
       fetchData()
     }
     setDeleteId(null)
+  }
+
+  function startEditing(payment: RecurringPayment) {
+    setEditingPayment(payment)
+    setEditName(payment.name)
+    setEditAmount(payment.amount.toString())
+  }
+
+  function cancelEditing() {
+    setEditingPayment(null)
+    setEditName('')
+    setEditAmount('')
+  }
+
+  async function handleSaveEdit() {
+    if (!editingPayment) return
+    setSubmitting(true)
+
+    const { error } = await supabase
+      .from('recurring_payments')
+      .update({
+        name: editName,
+        amount: parseFloat(editAmount),
+      })
+      .eq('id', editingPayment.id)
+
+    if (error) {
+      console.error('Error updating payment:', error)
+    } else {
+      fetchData()
+      cancelEditing()
+    }
+    setSubmitting(false)
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -243,22 +298,67 @@ export function RecurringPage() {
                           payment.is_paid ? 'text-gray-400 line-through' : 'text-gray-900'
                         }`}
                       >
-                        {payment.name}
+                        {editingPayment?.id === payment.id ? (
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                          />
+                        ) : (
+                          payment.name
+                        )}
                       </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
                           payment.is_paid ? 'text-gray-400' : 'text-gray-900'
                         }`}
                       >
-                        {formatCurrency(payment.amount)}
+                        {editingPayment?.id === payment.id ? (
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={editAmount}
+                            onChange={(e) => setEditAmount(normalizeNumberInput(e.target.value))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-right"
+                          />
+                        ) : (
+                          formatCurrency(payment.amount)
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button
-                          onClick={() => setDeleteId(payment.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          {t('delete')}
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
+                        {editingPayment?.id === payment.id ? (
+                          <>
+                            <button
+                              onClick={handleSaveEdit}
+                              disabled={submitting}
+                              className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                            >
+                              {t('save')}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="text-gray-600 hover:text-gray-800"
+                            >
+                              {t('cancel')}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEditing(payment)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              {t('edit')}
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(payment.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              {t('delete')}
+                            </button>
+                          </>
+                        )}
                       </td>
                     </SortableRow>
                   ))}
