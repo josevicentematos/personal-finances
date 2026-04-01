@@ -254,6 +254,9 @@ export function SummaryPage() {
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('amount')}
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    USD
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -276,18 +279,19 @@ export function SummaryPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                       {tx.expense ? (
-                        <>
-                          <span className="text-red-600 dark:text-red-400">-{formatCurrency(tx.expense)}</span>
-                          <span className="text-gray-500 dark:text-gray-400 ml-2">({formatUSD(tx.expense / tx.dollar_rate)})</span>
-                        </>
+                        <span className="text-red-600 dark:text-red-400">-{formatCurrency(tx.expense)}</span>
                       ) : tx.income ? (
-                        <>
-                          <span className="text-green-600 dark:text-green-400">+{formatCurrency(tx.income)}</span>
-                          <span className="text-gray-500 dark:text-gray-400 ml-2">({formatUSD(tx.income / tx.dollar_rate)})</span>
-                        </>
+                        <span className="text-green-600 dark:text-green-400">+{formatCurrency(tx.income)}</span>
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
+                      {tx.expense
+                        ? formatUSD(tx.expense / tx.dollar_rate)
+                        : tx.income
+                          ? formatUSD(tx.income / tx.dollar_rate)
+                          : '-'}
                     </td>
                   </tr>
                 ))}
