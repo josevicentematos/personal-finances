@@ -1,9 +1,18 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { TransactionWithRelations, Category, Account } from '@/types'
+import { TransactionWithRelations, Category, Account, AppSettings } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { useTranslation } from '@/lib/i18n'
+
+function formatUSD(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
 
 interface CategoryExpense {
   category: Category
@@ -13,6 +22,7 @@ interface CategoryExpense {
 export function SummaryPage() {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const { t } = useTranslation()
 
@@ -21,7 +31,7 @@ export function SummaryPage() {
   }, [])
 
   async function fetchData() {
-    const [txRes, accRes] = await Promise.all([
+    const [txRes, accRes, settingsRes] = await Promise.all([
       supabase
         .from('transactions')
         .select('*, category:categories(*), account:accounts(*)')
@@ -30,6 +40,10 @@ export function SummaryPage() {
         .from('accounts')
         .select('*')
         .order('sort_order', { ascending: true }),
+      supabase
+        .from('app_settings')
+        .select('*')
+        .single(),
     ])
 
     if (txRes.error) {
@@ -42,6 +56,12 @@ export function SummaryPage() {
       console.error('Error fetching accounts:', accRes.error)
     } else {
       setAccounts(accRes.data ?? [])
+    }
+
+    if (settingsRes.error) {
+      console.error('Error fetching settings:', settingsRes.error)
+    } else {
+      setSettings(settingsRes.data)
     }
 
     setLoading(false)
@@ -99,6 +119,14 @@ export function SummaryPage() {
     return summaryAccounts.reduce((sum, acc) => sum + acc.balance, 0)
   }, [summaryAccounts])
 
+  // Get current dollar rate
+  const currentDollarRate = settings?.dollar_rate ?? 1
+
+  // Calculate total USD balance
+  const totalSummaryBalanceUSD = useMemo(() => {
+    return totalSummaryBalance / currentDollarRate
+  }, [totalSummaryBalance, currentDollarRate])
+
   // Format month for display
   function formatMonthLabel(monthStr: string): string {
     const [year, month] = monthStr.split('-')
@@ -115,34 +143,49 @@ export function SummaryPage() {
       {/* Account Balances */}
       {summaryAccounts.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('accountBalances')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('accountBalances')}</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('rate')}: {currentDollarRate.toFixed(2)} Bs/$
+            </span>
+          </div>
           <div className="space-y-3">
             {summaryAccounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-400">{account.name}</span>
-                <span
-                  className={`text-sm font-medium ${
-                    account.balance >= 0
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {formatCurrency(account.balance)}
-                </span>
+                <div className="text-right">
+                  <span
+                    className={`text-sm font-medium ${
+                      account.balance >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    {formatCurrency(account.balance)}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                    ({formatUSD(account.balance / currentDollarRate)})
+                  </span>
+                </div>
               </div>
             ))}
           </div>
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
             <span className="font-medium text-gray-700 dark:text-gray-300">{t('totalBalance')}</span>
-            <span
-              className={`font-bold ${
-                totalSummaryBalance >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}
-            >
-              {formatCurrency(totalSummaryBalance)}
-            </span>
+            <div className="text-right">
+              <span
+                className={`font-bold ${
+                  totalSummaryBalance >= 0
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {formatCurrency(totalSummaryBalance)}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                ({formatUSD(totalSummaryBalanceUSD)})
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -216,6 +259,9 @@ export function SummaryPage() {
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('amount')}
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('usdEquivalent')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -244,6 +290,13 @@ export function SummaryPage() {
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
+                      {tx.expense
+                        ? formatUSD(tx.expense / tx.dollar_rate)
+                        : tx.income
+                          ? formatUSD(tx.income / tx.dollar_rate)
+                          : '-'}
                     </td>
                   </tr>
                 ))}
