@@ -143,12 +143,7 @@ export function SummaryPage() {
       {/* Account Balances */}
       {summaryAccounts.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('accountBalances')}</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('rate')}: {currentDollarRate.toFixed(2)} Bs/$
-            </span>
-          </div>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('accountBalances')}</h2>
           <div className="space-y-3">
             {summaryAccounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between">
