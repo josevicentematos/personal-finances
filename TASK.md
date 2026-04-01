@@ -52,3 +52,8 @@ src/
 ### Task 3:
 - [x] Whenever you edit a movement it gets put at the bottom again, as if it had a new date set. Editing a movement should not move it around the table, whatever timestamp you save in the DB should not be modified when editing a movement.
 - [x] Under "total balance"/"saldo total" in the summary tab, in the balance of the accounts add a new balance that would be the amount of the main account minus the total of the recurrent payments that have not been checked yet. Name this balance "Real balance" in English.
+
+
+### Task 4:
+- [x] The automatic monthly reset of the recurrent payments cannot be done via localStorage as I will also use this website on my phone. It needs to work across devices.
+- [x] Add a separator by month in the Categories tab as well, just like the Movements tab. That way I can see how much was spent or how much income I had in the categories across the months.

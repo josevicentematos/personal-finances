@@ -1,6 +1,13 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, useMemo, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Category } from '@/types'
+
+interface TransactionSummary {
+  category_id: string
+  expense: number | null
+  income: number | null
+  date: string
+}
 import { formatCurrency } from '@/lib/format'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -30,7 +37,8 @@ interface CategoryWithTotals extends Category {
 }
 
 export function CategoriesPage() {
-  const [categories, setCategories] = useState<CategoryWithTotals[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [transactions, setTransactions] = useState<TransactionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
@@ -42,6 +50,7 @@ export function CategoriesPage() {
   const [confirmEditId, setConfirmEditId] = useState<string | null>(null)
   const [editWarning, setEditWarning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [activeMonth, setActiveMonth] = useState<string>('')
   const { t } = useTranslation()
 
   const sensors = useSensors(
@@ -67,25 +76,55 @@ export function CategoriesPage() {
       return
     }
 
-    const { data: transactions, error: txError } = await supabase
+    const { data: txData, error: txError } = await supabase
       .from('transactions')
-      .select('category_id, expense, income')
+      .select('category_id, expense, income, date')
 
     if (txError) {
       console.error('Error fetching transactions:', txError)
     }
 
-    const categoriesWithTotals = (categoriesData ?? []).map((cat) => {
-      const catTransactions = (transactions ?? []).filter((t) => t.category_id === cat.id)
+    setCategories(categoriesData ?? [])
+    setTransactions(txData ?? [])
+    setLoading(false)
+  }
+
+  // Get all available months sorted in descending order (most recent first)
+  const monthOptions = useMemo(() => {
+    const months = new Set(transactions.map((t) => t.date.substring(0, 7)))
+    return Array.from(months).sort().reverse()
+  }, [transactions])
+
+  // Set initial active month to most recent
+  useEffect(() => {
+    if (monthOptions.length > 0 && !activeMonth) {
+      setActiveMonth(monthOptions[0] ?? '')
+    }
+  }, [monthOptions, activeMonth])
+
+  // Calculate totals per category for the active month
+  const categoriesWithTotals = useMemo((): CategoryWithTotals[] => {
+    return categories.map((cat) => {
+      const catTransactions = transactions.filter((t) => {
+        if (t.category_id !== cat.id) return false
+        if (activeMonth) {
+          return t.date.substring(0, 7) === activeMonth
+        }
+        return true
+      })
       return {
         ...cat,
         total_expense: catTransactions.reduce((sum, t) => sum + (t.expense ?? 0), 0),
         total_income: catTransactions.reduce((sum, t) => sum + (t.income ?? 0), 0),
       }
     })
+  }, [categories, transactions, activeMonth])
 
-    setCategories(categoriesWithTotals)
-    setLoading(false)
+  // Format month for display
+  function formatMonthLabel(monthStr: string): string {
+    const [year, month] = monthStr.split('-')
+    const date = new Date(parseInt(year ?? '2000'), parseInt(month ?? '1') - 1)
+    return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
   }
 
   async function handleAdd(e: FormEvent) {
@@ -216,7 +255,28 @@ export function CategoriesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('categories')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('categories')}</h1>
+
+      {/* Month Tabs */}
+      {monthOptions.length > 0 && (
+        <div className="mb-4 overflow-x-auto">
+          <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 min-w-max">
+            {monthOptions.map((month) => (
+              <button
+                key={month}
+                onClick={() => setActiveMonth(month)}
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeMonth === month
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                {formatMonthLabel(month)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Add Category Form */}
       <form onSubmit={handleAdd} className="bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -283,10 +343,10 @@ export function CategoriesPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 <SortableContext
-                  items={categories.map((c) => c.id)}
+                  items={categoriesWithTotals.map((c) => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {categories.map((category) => (
+                  {categoriesWithTotals.map((category) => (
                     <SortableRow key={category.id} id={category.id}>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {editingId === category.id ? (

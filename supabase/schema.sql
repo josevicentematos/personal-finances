@@ -47,6 +47,7 @@ CREATE TABLE app_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   dollar_rate NUMERIC(10, 2) NOT NULL DEFAULT 40.00,
   master_password_hash TEXT NOT NULL,
+  last_recurring_reset TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

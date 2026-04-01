@@ -47,5 +47,6 @@ export interface AppSettings {
   id: string
   dollar_rate: number
   master_password_hash: string
+  last_recurring_reset: string | null
   updated_at: string
 }

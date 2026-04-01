@@ -48,7 +48,19 @@ export function RecurringPage() {
 
   async function checkAndResetMonthlyPayments() {
     const currentMonth = new Date().toISOString().substring(0, 7) // YYYY-MM format
-    const lastResetMonth = localStorage.getItem('recurring-payments-last-reset')
+
+    // Get last reset month from database
+    const { data: settings, error: settingsError } = await supabase
+      .from('app_settings')
+      .select('last_recurring_reset')
+      .single()
+
+    if (settingsError) {
+      console.error('Error fetching settings:', settingsError)
+      return
+    }
+
+    const lastResetMonth = settings?.last_recurring_reset
 
     if (lastResetMonth !== currentMonth) {
       // New month - reset all recurring payments to unpaid
@@ -60,7 +72,15 @@ export function RecurringPage() {
       if (error) {
         console.error('Error resetting recurring payments:', error)
       } else {
-        localStorage.setItem('recurring-payments-last-reset', currentMonth)
+        // Update last reset month in database
+        const { error: updateError } = await supabase
+          .from('app_settings')
+          .update({ last_recurring_reset: currentMonth })
+          .not('id', 'is', null)
+
+        if (updateError) {
+          console.error('Error updating last reset month:', updateError)
+        }
       }
     }
   }
