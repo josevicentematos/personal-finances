@@ -10,7 +10,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
 
-const THEME_STORAGE_KEY = 'finance-app-theme'
+const THEME_STORAGE_KEY = 'bitacora-theme'
 
 function getSystemTheme(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches

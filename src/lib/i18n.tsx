@@ -5,8 +5,8 @@ export type Language = 'en' | 'es'
 const translations = {
   en: {
     // App title
-    appTitle: 'Finance',
-    appTitleFull: 'Personal Finance',
+    appTitle: 'Bitácora',
+    appTitleFull: 'Bitácora',
 
     // Navigation
     navSummary: 'Summary',
@@ -178,8 +178,8 @@ const translations = {
   },
   es: {
     // App title
-    appTitle: 'Finanzas',
-    appTitleFull: 'Finanzas Personales',
+    appTitle: 'Bitácora',
+    appTitleFull: 'Bitácora',
 
     // Navigation
     navSummary: 'Resumen',
@@ -361,7 +361,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null)
 
-const LANGUAGE_STORAGE_KEY = 'finance-app-language'
+const LANGUAGE_STORAGE_KEY = 'bitacora-language'
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {

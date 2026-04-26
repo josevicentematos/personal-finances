@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const AUTH_KEY = 'finance_app_authenticated'
+const AUTH_KEY = 'bitacora_authenticated'
 
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
