@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEvent, useRef } from 'react'
-import { CALENDAR_URL_KEY } from './CalendarPage'
+import { useState, useEffect, FormEvent } from 'react'
+import { loadCalendarUrls, saveCalendarUrls } from './CalendarPage'
 import { supabase } from '@/lib/supabase'
 import { AppSettings } from '@/types'
 import { PageSpinner } from '@/components/Spinner'
@@ -13,16 +13,15 @@ export function SettingsPage() {
   const [dollarRate, setDollarRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [calendarUrl, setCalendarUrl] = useState('')
+  const [calendarUrls, setCalendarUrls] = useState<string[]>([''])
   const [calendarSaved, setCalendarSaved] = useState(false)
   const { t, language, setLanguage } = useTranslation()
-  const calendarInputRef = useRef<HTMLInputElement>(null)
   const { mode, setMode } = useTheme()
 
   useEffect(() => {
     fetchSettings()
-    const stored = localStorage.getItem(CALENDAR_URL_KEY)
-    if (stored) setCalendarUrl(stored)
+    const stored = loadCalendarUrls()
+    setCalendarUrls(stored.length > 0 ? stored : [''])
   }, [])
 
   async function fetchSettings() {
@@ -72,16 +71,30 @@ export function SettingsPage() {
     setMode(newMode)
   }
 
+  function handleCalendarUrlChange(index: number, value: string) {
+    setCalendarUrls(prev => prev.map((u, i) => (i === index ? value : u)))
+  }
+
+  function handleCalendarAddEntry() {
+    setCalendarUrls(prev => [...prev, ''])
+  }
+
+  function handleCalendarRemoveEntry(index: number) {
+    setCalendarUrls(prev => {
+      const next = prev.filter((_, i) => i !== index)
+      return next.length > 0 ? next : ['']
+    })
+  }
+
   function handleCalendarSave() {
-    localStorage.setItem(CALENDAR_URL_KEY, calendarUrl.trim())
+    saveCalendarUrls(calendarUrls)
     setCalendarSaved(true)
     setTimeout(() => setCalendarSaved(false), 2000)
   }
 
   function handleCalendarClear() {
-    localStorage.removeItem(CALENDAR_URL_KEY)
-    setCalendarUrl('')
-    calendarInputRef.current?.focus()
+    saveCalendarUrls([])
+    setCalendarUrls([''])
   }
 
   return (
@@ -167,29 +180,47 @@ export function SettingsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('calendarTitle')}</h2>
           <div className="space-y-3">
-            <label htmlFor="calendarUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('calendarEmbedUrl')}
-            </label>
-            <input
-              id="calendarUrl"
-              ref={calendarInputRef}
-              type="url"
-              value={calendarUrl}
-              onChange={(e) => setCalendarUrl(e.target.value)}
-              placeholder={t('calendarEmbedUrlPlaceholder')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-            <div className="flex gap-2">
+            {calendarUrls.map((url, index) => (
+              <div key={index} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('calendarEntryLabel')} {index + 1}
+                  </label>
+                  {calendarUrls.length > 1 && (
+                    <button
+                      onClick={() => handleCalendarRemoveEntry(index)}
+                      className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                    >
+                      {t('calendarRemoveEntry')}
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => handleCalendarUrlChange(index, e.target.value)}
+                  placeholder={t('calendarEmbedUrlPlaceholder')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+              </div>
+            ))}
+            <button
+              onClick={handleCalendarAddEntry}
+              className="w-full px-3 py-2 text-sm text-blue-600 dark:text-blue-400 border border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              + {t('calendarAddAnother')}
+            </button>
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={handleCalendarSave}
-                disabled={!calendarUrl.trim()}
+                disabled={!calendarUrls.some(u => u.trim())}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {calendarSaved ? t('calendarUrlSaved') : t('calendarSave')}
               </button>
               <button
                 onClick={handleCalendarClear}
-                disabled={!calendarUrl}
+                disabled={!calendarUrls.some(u => u.trim())}
                 className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
               >
                 {t('calendarClear')}

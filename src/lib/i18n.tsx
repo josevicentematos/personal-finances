@@ -183,9 +183,12 @@ const translations = {
     calendarTitle: 'Google Calendar',
     calendarEmbedUrl: 'Embed URL',
     calendarEmbedUrlPlaceholder: 'https://calendar.google.com/calendar/embed?src=...',
-    calendarSave: 'Save URL',
-    calendarClear: 'Clear',
+    calendarSave: 'Save',
+    calendarClear: 'Clear all',
     calendarUrlSaved: 'Saved!',
+    calendarAddAnother: 'Add another calendar',
+    calendarRemoveEntry: 'Remove',
+    calendarEntryLabel: 'Calendar',
     goToSettings: 'Go to Settings',
 
     // Error boundary
@@ -373,9 +376,12 @@ const translations = {
     calendarTitle: 'Google Calendar',
     calendarEmbedUrl: 'URL de insercion',
     calendarEmbedUrlPlaceholder: 'https://calendar.google.com/calendar/embed?src=...',
-    calendarSave: 'Guardar URL',
-    calendarClear: 'Limpiar',
+    calendarSave: 'Guardar',
+    calendarClear: 'Limpiar todo',
     calendarUrlSaved: 'Guardado!',
+    calendarAddAnother: 'Agregar otro calendario',
+    calendarRemoveEntry: 'Quitar',
+    calendarEntryLabel: 'Calendario',
     goToSettings: 'Ir a Ajustes',
 
     // Error boundary
