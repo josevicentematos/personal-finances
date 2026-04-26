@@ -8,11 +8,14 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number)
+  // Construct with local-timezone parts to avoid UTC→local day shift in UTC-3
+  const date = new Date(year!, month! - 1, day!)
   return new Intl.DateTimeFormat('es-UY', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }).format(new Date(dateString))
+  }).format(date)
 }
 
 export function formatDateTime(dateString: string): string {
