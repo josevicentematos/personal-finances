@@ -29,7 +29,7 @@ export function SortableRow({ id, children, className = '' }: SortableRowProps) 
       <td className="px-2 py-4 whitespace-nowrap w-8">
         <button
           type="button"
-          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none"
+          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 touch-none"
           {...attributes}
           {...listeners}
         >
@@ -60,7 +60,7 @@ export function SortableRow({ id, children, className = '' }: SortableRowProps) 
 
 export function DragHandleHeader() {
   return (
-    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">
+    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">
       &nbsp;
     </th>
   )

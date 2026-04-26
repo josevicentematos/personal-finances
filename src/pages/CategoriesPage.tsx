@@ -279,7 +279,7 @@ export function CategoriesPage() {
       )}
 
       {/* Add Category Form */}
-      <form onSubmit={handleAdd} className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-4">
           <div className="flex gap-3">
             <input
@@ -288,7 +288,7 @@ export function CategoriesPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               required
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
             <button
               type="submit"
@@ -299,7 +299,7 @@ export function CategoriesPage() {
             </button>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('color')}
             </label>
             <ColorPicker value={newColor} onChange={setNewColor} />
@@ -314,34 +314,34 @@ export function CategoriesPage() {
           description={t('addFirstCategory')}
         />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <DragHandleHeader />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('color')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('name')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('categoryTotalExpenses')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('categoryTotalIncome')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 <SortableContext
                   items={categoriesWithTotals.map((c) => c.id)}
                   strategy={verticalListSortingStrategy}
@@ -355,30 +355,30 @@ export function CategoriesPage() {
                           </div>
                         ) : (
                           <div
-                            className="w-8 h-8 rounded-full border border-gray-200"
+                            className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600"
                             style={{ backgroundColor: category.color || DEFAULT_CATEGORY_COLOR }}
                           />
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {editingId === category.id ? (
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
-                              className="px-2 py-1 border border-gray-300 rounded"
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                               autoFocus
                             />
                             <button
                               onClick={checkAndConfirmEdit}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                             >
                               {t('save')}
                             </button>
                             <button
                               onClick={cancelEdit}
-                              className="text-gray-500 hover:text-gray-700"
+                              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                             >
                               {t('cancel')}
                             </button>
@@ -387,23 +387,23 @@ export function CategoriesPage() {
                           category.name
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400">
                         {formatCurrency(category.total_expense)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400">
                         {formatCurrency(category.total_income)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
                         <button
                           onClick={() => startEdit(category)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                           disabled={editingId !== null}
                         >
                           {t('edit')}
                         </button>
                         <button
                           onClick={() => checkAndDelete(category.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                         >
                           {t('delete')}
                         </button>
