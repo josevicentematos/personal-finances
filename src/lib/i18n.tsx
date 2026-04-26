@@ -191,6 +191,16 @@ const translations = {
     calendarEntryLabel: 'Calendar',
     goToSettings: 'Go to Settings',
 
+    // Transactions extra
+    searchTransactions: 'Search transactions...',
+    exportCsv: 'Export CSV',
+    filters: 'Filters',
+    filterFrom: 'From',
+    filterTo: 'To',
+    filterMinAmount: 'Min amount',
+    filterMaxAmount: 'Max amount',
+    loadMore: 'Load more',
+
     // Error boundary
     somethingWentWrong: 'Something went wrong',
     unexpectedError: 'An unexpected error occurred',
@@ -383,6 +393,16 @@ const translations = {
     calendarRemoveEntry: 'Quitar',
     calendarEntryLabel: 'Calendario',
     goToSettings: 'Ir a Ajustes',
+
+    // Transactions extra
+    searchTransactions: 'Buscar movimientos...',
+    exportCsv: 'Exportar CSV',
+    filters: 'Filtros',
+    filterFrom: 'Desde',
+    filterTo: 'Hasta',
+    filterMinAmount: 'Monto min',
+    filterMaxAmount: 'Monto max',
+    loadMore: 'Cargar mas',
 
     // Error boundary
     somethingWentWrong: 'Algo salio mal',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FormEvent } from 'react'
+import { useState, useEffect, useMemo, FormEvent, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Category } from '@/types'
 
@@ -8,7 +8,16 @@ interface TransactionSummary {
   income: number | null
   date: string
 }
+
 import { formatCurrency } from '@/lib/format'
+import {
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  countCategoryTransactions,
+  reorderCategories,
+} from '@/services/categories'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -16,6 +25,7 @@ import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { ColorPicker } from '@/components/ColorPicker'
 import { DEFAULT_CATEGORY_COLOR } from '@/lib/colors'
 import { useTranslation } from '@/lib/i18n'
+import toast from 'react-hot-toast'
 import {
   DndContext,
   closestCenter,
@@ -55,61 +65,46 @@ export function CategoriesPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  useEffect(() => {
-    fetchCategories()
+  const loadData = useCallback(async () => {
+    try {
+      const cats = await fetchCategories()
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select('category_id, expense, income, date')
+      if (txError) throw txError
+      setCategories(cats)
+      setTransactions(txData ?? [])
+    } catch (err) {
+      toast.error('Failed to load categories')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  async function fetchCategories() {
-    const { data: categoriesData, error: catError } = await supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order', { ascending: true })
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
-    if (catError) {
-      console.error('Error fetching categories:', catError)
-      setLoading(false)
-      return
-    }
-
-    const { data: txData, error: txError } = await supabase
-      .from('transactions')
-      .select('category_id, expense, income, date')
-
-    if (txError) {
-      console.error('Error fetching transactions:', txError)
-    }
-
-    setCategories(categoriesData ?? [])
-    setTransactions(txData ?? [])
-    setLoading(false)
-  }
-
-  // Get all available months sorted in descending order (most recent first)
   const monthOptions = useMemo(() => {
     const months = new Set(transactions.map((t) => t.date.substring(0, 7)))
     return Array.from(months).sort().reverse()
   }, [transactions])
 
-  // Set initial active month to most recent
   useEffect(() => {
     if (monthOptions.length > 0 && !activeMonth) {
       setActiveMonth(monthOptions[0] ?? '')
     }
   }, [monthOptions, activeMonth])
 
-  // Calculate totals per category for the active month
   const categoriesWithTotals = useMemo((): CategoryWithTotals[] => {
     return categories.map((cat) => {
       const catTransactions = transactions.filter((t) => {
         if (t.category_id !== cat.id) return false
-        if (activeMonth) {
-          return t.date.substring(0, 7) === activeMonth
-        }
+        if (activeMonth) return t.date.substring(0, 7) === activeMonth
         return true
       })
       return {
@@ -120,7 +115,6 @@ export function CategoriesPage() {
     })
   }, [categories, transactions, activeMonth])
 
-  // Format month for display
   function formatMonthLabel(monthStr: string): string {
     const [year, month] = monthStr.split('-')
     const date = new Date(parseInt(year ?? '2000'), parseInt(month ?? '1') - 1)
@@ -129,50 +123,50 @@ export function CategoriesPage() {
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
+    const trimmed = newName.trim()
+    if (!trimmed) { toast.error('Category name is required'); return }
+    if (trimmed.length > 60) { toast.error('Category name must be under 60 characters'); return }
+
     setSubmitting(true)
-
-    const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order), -1)
-
-    const { error } = await supabase.from('categories').insert({
-      name: newName,
-      color: newColor,
-      sort_order: maxOrder + 1,
-    })
-
-    if (error) {
-      console.error('Error adding category:', error)
-    } else {
+    try {
+      const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order), -1)
+      await createCategory(trimmed, newColor, maxOrder + 1)
       setNewName('')
       setNewColor(DEFAULT_CATEGORY_COLOR)
-      fetchCategories()
+      toast.success('Category added')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to add category')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function checkAndDelete(id: string) {
-    const { count } = await supabase
-      .from('transactions')
-      .select('*', { count: 'exact', head: true })
-      .eq('category_id', id)
-
-    if (count && count > 0) {
-      setDeleteWarning(true)
+    try {
+      const count = await countCategoryTransactions(id)
+      if (count > 0) setDeleteWarning(true)
+      setDeleteId(id)
+    } catch (err) {
+      toast.error('Failed to check category usage')
+      console.error(err)
     }
-    setDeleteId(id)
   }
 
   async function handleDelete() {
     if (!deleteId) return
-
-    const { error } = await supabase.from('categories').delete().eq('id', deleteId)
-
-    if (error) {
-      console.error('Error deleting category:', error)
-    } else {
-      fetchCategories()
+    try {
+      await deleteCategory(deleteId)
+      toast.success('Category deleted')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to delete category')
+      console.error(err)
+    } finally {
+      setDeleteId(null)
+      setDeleteWarning(false)
     }
-    setDeleteId(null)
-    setDeleteWarning(false)
   }
 
   function startEdit(category: CategoryWithTotals) {
@@ -183,32 +177,32 @@ export function CategoriesPage() {
 
   async function checkAndConfirmEdit() {
     if (!editingId) return
-
-    const { count } = await supabase
-      .from('transactions')
-      .select('*', { count: 'exact', head: true })
-      .eq('category_id', editingId)
-
-    if (count && count > 0) {
-      setEditWarning(true)
+    try {
+      const count = await countCategoryTransactions(editingId)
+      if (count > 0) setEditWarning(true)
+      setConfirmEditId(editingId)
+    } catch (err) {
+      toast.error('Failed to check category usage')
+      console.error(err)
     }
-    setConfirmEditId(editingId)
   }
 
   async function handleEdit() {
     if (!confirmEditId) return
+    const trimmed = editName.trim()
+    if (!trimmed) { toast.error('Category name is required'); return }
+    if (trimmed.length > 60) { toast.error('Category name must be under 60 characters'); return }
 
-    const { error } = await supabase
-      .from('categories')
-      .update({ name: editName, color: editColor })
-      .eq('id', confirmEditId)
-
-    if (error) {
-      console.error('Error updating category:', error)
-    } else {
-      fetchCategories()
+    try {
+      await updateCategory(confirmEditId, trimmed, editColor)
+      toast.success('Category updated')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to update category')
+      console.error(err)
+    } finally {
+      cancelEdit()
     }
-    cancelEdit()
   }
 
   function cancelEdit() {
@@ -221,33 +215,23 @@ export function CategoriesPage() {
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-
     if (!over || active.id === over.id) return
 
     const oldIndex = categories.findIndex((c) => c.id === active.id)
     const newIndex = categories.findIndex((c) => c.id === over.id)
-
     if (oldIndex === -1 || newIndex === -1) return
 
-    // Reorder locally first for immediate feedback
     const newCategories = [...categories]
     const [movedItem] = newCategories.splice(oldIndex, 1)
-    if (movedItem) {
-      newCategories.splice(newIndex, 0, movedItem)
-    }
+    if (movedItem) newCategories.splice(newIndex, 0, movedItem)
     setCategories(newCategories)
 
-    // Update sort_order in database
-    const updates = newCategories.map((category, index) => ({
-      id: category.id,
-      sort_order: index,
-    }))
-
-    for (const update of updates) {
-      await supabase
-        .from('categories')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id)
+    try {
+      await reorderCategories(newCategories.map((cat, index) => ({ id: cat.id, sort_order: index })))
+    } catch (err) {
+      toast.error('Failed to reorder categories')
+      console.error(err)
+      await loadData()
     }
   }
 
@@ -257,7 +241,6 @@ export function CategoriesPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('categories')}</h1>
 
-      {/* Month Tabs */}
       {monthOptions.length > 0 && (
         <div className="mb-4 overflow-x-auto">
           <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 min-w-max">
@@ -278,7 +261,6 @@ export function CategoriesPage() {
         </div>
       )}
 
-      {/* Add Category Form */}
       <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-4">
           <div className="flex gap-3">
@@ -308,18 +290,10 @@ export function CategoriesPage() {
       </form>
 
       {categories.length === 0 ? (
-        <EmptyState
-          icon="📁"
-          title={t('noCategoriesYet')}
-          description={t('addFirstCategory')}
-        />
+        <EmptyState icon="📁" title={t('noCategoriesYet')} description={t('addFirstCategory')} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -424,10 +398,7 @@ export function CategoriesPage() {
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
         onConfirm={handleDelete}
-        onCancel={() => {
-          setDeleteId(null)
-          setDeleteWarning(false)
-        }}
+        onCancel={() => { setDeleteId(null); setDeleteWarning(false) }}
         destructive
       />
 

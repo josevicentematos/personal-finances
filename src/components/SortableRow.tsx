@@ -9,14 +9,9 @@ interface SortableRowProps {
 }
 
 export function SortableRow({ id, children, className = '' }: SortableRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -29,6 +24,7 @@ export function SortableRow({ id, children, className = '' }: SortableRowProps) 
       <td className="px-2 py-4 whitespace-nowrap w-8">
         <button
           type="button"
+          aria-label="Drag to reorder"
           className="cursor-grab active:cursor-grabbing p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 touch-none"
           {...attributes}
           {...listeners}

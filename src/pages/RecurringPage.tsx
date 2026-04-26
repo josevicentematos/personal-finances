@@ -1,12 +1,22 @@
-import { useState, useEffect, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, FormEvent, useCallback } from 'react'
 import { RecurringPayment, Account } from '@/types'
 import { formatCurrency, normalizeNumberInput } from '@/lib/format'
+import {
+  fetchRecurringPayments,
+  createRecurringPayment,
+  updateRecurringPayment,
+  toggleRecurringPaid,
+  deleteRecurringPayment,
+  reorderRecurringPayments,
+} from '@/services/recurring'
+import { fetchAccounts } from '@/services/accounts'
+import { useRecurringReset } from '@/hooks/useRecurringReset'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import toast from 'react-hot-toast'
 import {
   DndContext,
   closestCenter,
@@ -37,122 +47,73 @@ export function RecurringPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  useEffect(() => {
-    checkAndResetMonthlyPayments().then(() => fetchData())
+  const fetchData = useCallback(async () => {
+    try {
+      const [allPayments, allAccounts] = await Promise.all([
+        fetchRecurringPayments(),
+        fetchAccounts(),
+      ])
+      setPayments(allPayments)
+      setMainAccounts(allAccounts.filter((a) => a.is_main))
+    } catch (err) {
+      toast.error('Failed to load recurring payments')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  async function checkAndResetMonthlyPayments() {
-    const currentMonth = new Date().toISOString().substring(0, 7) // YYYY-MM format
-
-    // Get last reset month from database
-    const { data: settings, error: settingsError } = await supabase
-      .from('app_settings')
-      .select('last_recurring_reset')
-      .single()
-
-    if (settingsError) {
-      console.error('Error fetching settings:', settingsError)
-      return
-    }
-
-    const lastResetMonth = settings?.last_recurring_reset
-
-    if (lastResetMonth !== currentMonth) {
-      // New month - reset all recurring payments to unpaid
-      const { error } = await supabase
-        .from('recurring_payments')
-        .update({ is_paid: false })
-        .eq('is_paid', true)
-
-      if (error) {
-        console.error('Error resetting recurring payments:', error)
-      } else {
-        // Update last reset month in database
-        const { error: updateError } = await supabase
-          .from('app_settings')
-          .update({ last_recurring_reset: currentMonth })
-          .not('id', 'is', null)
-
-        if (updateError) {
-          console.error('Error updating last reset month:', updateError)
-        }
-      }
-    }
-  }
-
-  async function fetchData() {
-    const [paymentsRes, accountsRes] = await Promise.all([
-      supabase.from('recurring_payments').select('*').order('sort_order', { ascending: true }),
-      supabase.from('accounts').select('*').eq('is_main', true),
-    ])
-
-    if (paymentsRes.error) {
-      console.error('Error fetching payments:', paymentsRes.error)
-    } else {
-      setPayments(paymentsRes.data ?? [])
-    }
-
-    if (accountsRes.error) {
-      console.error('Error fetching accounts:', accountsRes.error)
-    } else {
-      setMainAccounts(accountsRes.data ?? [])
-    }
-
-    setLoading(false)
-  }
+  useRecurringReset(fetchData)
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
+    const trimmed = newName.trim()
+    if (!trimmed) { toast.error('Payment name is required'); return }
+    if (trimmed.length > 60) { toast.error('Payment name must be under 60 characters'); return }
+    const amount = parseFloat(newAmount)
+    if (!newAmount || amount <= 0) { toast.error('Amount must be greater than 0'); return }
+
     setSubmitting(true)
-
-    const maxOrder = payments.reduce((max, p) => Math.max(max, p.sort_order), -1)
-
-    const { error } = await supabase.from('recurring_payments').insert({
-      name: newName,
-      amount: parseFloat(newAmount),
-      is_paid: false,
-      sort_order: maxOrder + 1,
-    })
-
-    if (error) {
-      console.error('Error adding payment:', error)
-    } else {
+    try {
+      const maxOrder = payments.reduce((max, p) => Math.max(max, p.sort_order), -1)
+      await createRecurringPayment(trimmed, amount, maxOrder + 1)
       setNewName('')
       setNewAmount('')
-      fetchData()
+      toast.success('Payment added')
+      await fetchData()
+    } catch (err) {
+      toast.error('Failed to add payment')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function handleTogglePaid(id: string, currentPaid: boolean) {
-    const { error } = await supabase
-      .from('recurring_payments')
-      .update({ is_paid: !currentPaid })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error toggling payment:', error)
-    } else {
-      fetchData()
+    try {
+      await toggleRecurringPaid(id, !currentPaid)
+      await fetchData()
+    } catch (err) {
+      toast.error('Failed to update payment')
+      console.error(err)
     }
   }
 
   async function handleDelete() {
     if (!deleteId) return
-
-    const { error } = await supabase.from('recurring_payments').delete().eq('id', deleteId)
-
-    if (error) {
-      console.error('Error deleting payment:', error)
-    } else {
-      fetchData()
+    try {
+      await deleteRecurringPayment(deleteId)
+      toast.success('Payment deleted')
+      await fetchData()
+    } catch (err) {
+      toast.error('Failed to delete payment')
+      console.error(err)
+    } finally {
+      setDeleteId(null)
     }
-    setDeleteId(null)
   }
 
   function startEditing(payment: RecurringPayment) {
@@ -169,63 +130,51 @@ export function RecurringPage() {
 
   async function handleSaveEdit() {
     if (!editingPayment) return
+    const trimmed = editName.trim()
+    if (!trimmed) { toast.error('Payment name is required'); return }
+    if (trimmed.length > 60) { toast.error('Payment name must be under 60 characters'); return }
+    const amount = parseFloat(editAmount)
+    if (!editAmount || amount <= 0) { toast.error('Amount must be greater than 0'); return }
+
     setSubmitting(true)
-
-    const { error } = await supabase
-      .from('recurring_payments')
-      .update({
-        name: editName,
-        amount: parseFloat(editAmount),
-      })
-      .eq('id', editingPayment.id)
-
-    if (error) {
-      console.error('Error updating payment:', error)
-    } else {
-      fetchData()
+    try {
+      await updateRecurringPayment(editingPayment.id, trimmed, amount)
+      toast.success('Payment updated')
+      await fetchData()
       cancelEditing()
+    } catch (err) {
+      toast.error('Failed to update payment')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-
     if (!over || active.id === over.id) return
 
     const oldIndex = payments.findIndex((p) => p.id === active.id)
     const newIndex = payments.findIndex((p) => p.id === over.id)
-
     if (oldIndex === -1 || newIndex === -1) return
 
-    // Reorder locally first for immediate feedback
     const newPayments = [...payments]
     const [movedItem] = newPayments.splice(oldIndex, 1)
-    if (movedItem) {
-      newPayments.splice(newIndex, 0, movedItem)
-    }
+    if (movedItem) newPayments.splice(newIndex, 0, movedItem)
     setPayments(newPayments)
 
-    // Update sort_order in database
-    const updates = newPayments.map((payment, index) => ({
-      id: payment.id,
-      sort_order: index,
-    }))
-
-    for (const update of updates) {
-      await supabase
-        .from('recurring_payments')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id)
+    try {
+      await reorderRecurringPayments(newPayments.map((p, i) => ({ id: p.id, sort_order: i })))
+    } catch (err) {
+      toast.error('Failed to reorder payments')
+      console.error(err)
+      await fetchData()
     }
   }
 
   if (loading) return <PageSpinner />
 
-  const unpaidTotal = payments
-    .filter((p) => !p.is_paid)
-    .reduce((sum, p) => sum + p.amount, 0)
-
+  const unpaidTotal = payments.filter((p) => !p.is_paid).reduce((sum, p) => sum + p.amount, 0)
   const mainAccountsBalance = mainAccounts.reduce((sum, acc) => sum + acc.balance, 0)
   const realMoney = mainAccountsBalance - unpaidTotal
 
@@ -233,7 +182,6 @@ export function RecurringPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('recurringPayments')}</h1>
 
-      {/* Add Payment Form */}
       <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
@@ -264,18 +212,10 @@ export function RecurringPage() {
       </form>
 
       {payments.length === 0 ? (
-        <EmptyState
-          icon="🔄"
-          title={t('noRecurringPayments')}
-          description={t('addRecurringExpenses')}
-        />
+        <EmptyState icon="🔄" title={t('noRecurringPayments')} description={t('addRecurringExpenses')} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-6">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -315,7 +255,9 @@ export function RecurringPage() {
                       </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                          payment.is_paid ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
+                          payment.is_paid
+                            ? 'text-gray-400 dark:text-gray-500 line-through'
+                            : 'text-gray-900 dark:text-white'
                         }`}
                       >
                         {editingPayment?.id === payment.id ? (
@@ -389,9 +331,10 @@ export function RecurringPage() {
         </div>
       )}
 
-      {/* Real Money Calculation */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('realMoneyCalculation')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          {t('realMoneyCalculation')}
+        </h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">{t('mainAccountsBalanceLabel')}</span>
@@ -405,9 +348,7 @@ export function RecurringPage() {
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
             <span className="font-semibold text-gray-900 dark:text-white">{t('realMoney')}</span>
-            <span
-              className={`font-bold text-lg ${realMoney >= 0 ? 'text-green-600' : 'text-red-600'}`}
-            >
+            <span className={`font-bold text-lg ${realMoney >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(realMoney)}
             </span>
           </div>

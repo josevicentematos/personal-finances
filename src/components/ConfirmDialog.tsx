@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 interface ConfirmDialogProps {
   isOpen: boolean
   title: string
@@ -19,6 +21,15 @@ export function ConfirmDialog({
   onCancel,
   destructive = false,
 }: ConfirmDialogProps) {
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onCancel])
+
   if (!isOpen) return null
 
   return (
@@ -38,9 +49,7 @@ export function ConfirmDialog({
             <button
               onClick={onConfirm}
               className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
-                destructive
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
               {confirmLabel}

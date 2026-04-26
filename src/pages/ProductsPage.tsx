@@ -1,11 +1,21 @@
-import { useState, useEffect, useMemo, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect, useMemo, FormEvent, useCallback } from 'react'
 import { Product } from '@/types'
+import {
+  fetchProducts,
+  fetchTransactionProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  countProductTransactions,
+  reorderProducts,
+  TransactionProductRow,
+} from '@/services/products'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import toast from 'react-hot-toast'
 import {
   DndContext,
   closestCenter,
@@ -20,14 +30,6 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-
-interface TransactionProductRow {
-  id: string
-  product_id: string
-  quantity: number
-  product: Product | null
-  transaction: { date: string } | null
-}
 
 export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -48,43 +50,29 @@ export function ProductsPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  useEffect(() => {
-    fetchData()
+  const loadData = useCallback(async () => {
+    try {
+      const [prods, txProds] = await Promise.all([fetchProducts(), fetchTransactionProducts()])
+      setProducts(prods)
+      setTxProducts(txProds)
+    } catch (err) {
+      toast.error('Failed to load products')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  async function fetchData() {
-    const [productsRes, txProductsRes] = await Promise.all([
-      supabase.from('products').select('*').order('sort_order', { ascending: true }),
-      supabase
-        .from('transaction_products')
-        .select('*, product:products(*), transaction:transactions(date)'),
-    ])
-
-    if (productsRes.error) {
-      console.error('Error fetching products:', productsRes.error)
-    } else {
-      setProducts(productsRes.data ?? [])
-    }
-
-    if (txProductsRes.error) {
-      console.error('Error fetching transaction products:', txProductsRes.error)
-    } else {
-      setTxProducts((txProductsRes.data ?? []) as TransactionProductRow[])
-    }
-
-    setLoading(false)
-  }
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const monthOptions = useMemo(() => {
     const months = new Set(
-      txProducts
-        .map((tp) => tp.transaction?.date?.substring(0, 7))
-        .filter(Boolean) as string[]
+      txProducts.map((tp) => tp.transaction?.date?.substring(0, 7)).filter(Boolean) as string[]
     )
     return Array.from(months).sort().reverse()
   }, [txProducts])
@@ -133,36 +121,35 @@ export function ProductsPage() {
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
+    const trimmed = newName.trim()
+    if (!trimmed) { toast.error('Product name is required'); return }
+    if (trimmed.length > 60) { toast.error('Product name must be under 60 characters'); return }
+
     setSubmitting(true)
-
-    const maxOrder = products.reduce((max, p) => Math.max(max, p.sort_order), -1)
-
-    const { error } = await supabase.from('products').insert({
-      name: newName,
-      unit: newUnit || null,
-      sort_order: maxOrder + 1,
-    })
-
-    if (error) {
-      console.error('Error adding product:', error)
-    } else {
+    try {
+      const maxOrder = products.reduce((max, p) => Math.max(max, p.sort_order), -1)
+      await createProduct(trimmed, newUnit || null, maxOrder + 1)
       setNewName('')
       setNewUnit('')
-      fetchData()
+      toast.success('Product added')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to add product')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function checkAndDelete(id: string) {
-    const { count } = await supabase
-      .from('transaction_products')
-      .select('*', { count: 'exact', head: true })
-      .eq('product_id', id)
-
-    if (count && count > 0) {
-      setDeleteWarning(true)
+    try {
+      const count = await countProductTransactions(id)
+      if (count > 0) setDeleteWarning(true)
+      setDeleteId(id)
+    } catch (err) {
+      toast.error('Failed to check product usage')
+      console.error(err)
     }
-    setDeleteId(id)
   }
 
   async function handleDelete() {
@@ -172,15 +159,17 @@ export function ProductsPage() {
       return
     }
 
-    const { error } = await supabase.from('products').delete().eq('id', deleteId)
-
-    if (error) {
-      console.error('Error deleting product:', error)
-    } else {
-      fetchData()
+    try {
+      await deleteProduct(deleteId)
+      toast.success('Product deleted')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to delete product')
+      console.error(err)
+    } finally {
+      setDeleteId(null)
+      setDeleteWarning(false)
     }
-    setDeleteId(null)
-    setDeleteWarning(false)
   }
 
   function startEdit(product: Product) {
@@ -191,18 +180,20 @@ export function ProductsPage() {
 
   async function saveEdit() {
     if (!editingId) return
+    const trimmed = editName.trim()
+    if (!trimmed) { toast.error('Product name is required'); return }
+    if (trimmed.length > 60) { toast.error('Product name must be under 60 characters'); return }
 
-    const { error } = await supabase
-      .from('products')
-      .update({ name: editName, unit: editUnit || null })
-      .eq('id', editingId)
-
-    if (error) {
-      console.error('Error updating product:', error)
-    } else {
-      fetchData()
+    try {
+      await updateProduct(editingId, trimmed, editUnit || null)
+      toast.success('Product updated')
+      await loadData()
+    } catch (err) {
+      toast.error('Failed to update product')
+      console.error(err)
+    } finally {
+      cancelEdit()
     }
-    cancelEdit()
   }
 
   function cancelEdit() {
@@ -213,31 +204,23 @@ export function ProductsPage() {
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-
     if (!over || active.id === over.id) return
 
     const oldIndex = products.findIndex((p) => p.id === active.id)
     const newIndex = products.findIndex((p) => p.id === over.id)
-
     if (oldIndex === -1 || newIndex === -1) return
 
     const newProducts = [...products]
     const [movedItem] = newProducts.splice(oldIndex, 1)
-    if (movedItem) {
-      newProducts.splice(newIndex, 0, movedItem)
-    }
+    if (movedItem) newProducts.splice(newIndex, 0, movedItem)
     setProducts(newProducts)
 
-    const updates = newProducts.map((product, index) => ({
-      id: product.id,
-      sort_order: index,
-    }))
-
-    for (const update of updates) {
-      await supabase
-        .from('products')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id)
+    try {
+      await reorderProducts(newProducts.map((p, i) => ({ id: p.id, sort_order: i })))
+    } catch (err) {
+      toast.error('Failed to reorder products')
+      console.error(err)
+      await loadData()
     }
   }
 
@@ -247,7 +230,6 @@ export function ProductsPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('products')}</h1>
 
-      {/* Month Tabs */}
       {monthOptions.length > 0 && (
         <div className="mb-4 overflow-x-auto">
           <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 min-w-max">
@@ -268,7 +250,6 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* Add Product Form */}
       <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
@@ -296,7 +277,6 @@ export function ProductsPage() {
         </div>
       </form>
 
-      {/* Monthly Usage Table */}
       {monthlyUsage.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -345,20 +325,11 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* Full Product Catalog */}
       {products.length === 0 ? (
-        <EmptyState
-          icon="🛒"
-          title={t('noProductsYet')}
-          description={t('addFirstProduct')}
-        />
+        <EmptyState icon="🛒" title={t('noProductsYet')} description={t('addFirstProduct')} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -457,10 +428,7 @@ export function ProductsPage() {
         confirmLabel={deleteWarning ? t('cancel') : t('delete')}
         cancelLabel={t('cancel')}
         onConfirm={handleDelete}
-        onCancel={() => {
-          setDeleteId(null)
-          setDeleteWarning(false)
-        }}
+        onCancel={() => { setDeleteId(null); setDeleteWarning(false) }}
         destructive={!deleteWarning}
       />
     </div>

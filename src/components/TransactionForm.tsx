@@ -3,6 +3,16 @@ import { supabase } from '@/lib/supabase'
 import { Account, Category, Transaction, RecurringPayment, Product } from '@/types'
 import { useTranslation } from '@/lib/i18n'
 import { normalizeNumberInput } from '@/lib/format'
+import { fetchAccounts, updateAccountBalance } from '@/services/accounts'
+import { fetchCategories } from '@/services/categories'
+import { fetchSettings } from '@/services/settings'
+import { fetchUnpaidRecurringPayments, toggleRecurringPaid } from '@/services/recurring'
+import { fetchProducts } from '@/services/products'
+import { createTransaction, updateTransaction } from '@/services/transactions'
+import { AmountFields } from './AmountFields'
+import { RecurringPaymentSelector } from './RecurringPaymentSelector'
+import { ProductLineEditor, ProductLine } from './ProductLineEditor'
+import toast from 'react-hot-toast'
 
 interface TransactionFormProps {
   isOpen: boolean
@@ -16,7 +26,7 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
   const [categories, setCategories] = useState<Category[]>([])
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [productLines, setProductLines] = useState<Array<{ productId: string; quantity: string }>>([])
+  const [productLines, setProductLines] = useState<ProductLine[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
@@ -35,71 +45,70 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [accountsRes, categoriesRes, settingsRes, recurringRes, productsRes] = await Promise.all([
-      supabase.from('accounts').select('*').order('sort_order', { ascending: true }),
-      supabase.from('categories').select('*').order('sort_order', { ascending: true }),
-      supabase.from('app_settings').select('dollar_rate').single(),
-      supabase.from('recurring_payments').select('*').eq('is_paid', false).order('sort_order', { ascending: true }),
-      supabase.from('products').select('*').order('sort_order', { ascending: true }),
-    ])
+    try {
+      const [accs, cats, settings, recurring, products] = await Promise.all([
+        fetchAccounts(),
+        fetchCategories(),
+        fetchSettings(),
+        fetchUnpaidRecurringPayments(),
+        fetchProducts(),
+      ])
 
-    if (accountsRes.data) {
-      setAccounts(accountsRes.data)
-    }
-    if (categoriesRes.data) {
-      setCategories(categoriesRes.data)
-    }
-    if (settingsRes.data) {
-      setDollarRate(settingsRes.data.dollar_rate.toString())
-    }
-    if (recurringRes.data) {
-      setRecurringPayments(recurringRes.data)
-    }
-    if (productsRes.data) {
-      setAllProducts(productsRes.data)
-    }
+      setAccounts(accs)
+      setCategories(cats)
+      setDollarRate(settings.dollar_rate.toString())
+      setRecurringPayments(recurring)
+      setAllProducts(products)
 
-    // If editing, populate form with existing data
-    if (editTransaction) {
-      setDate(editTransaction.date)
-      setDescription(editTransaction.description)
-      setCategoryId(editTransaction.category_id)
-      setAccountId(editTransaction.account_id)
-      setExpense(editTransaction.expense?.toString() ?? '')
-      setIncome(editTransaction.income?.toString() ?? '')
-      setDollarRate(editTransaction.dollar_rate.toString())
-      setOriginalAccountId(editTransaction.account_id)
-      setOriginalExpense(editTransaction.expense)
-      setOriginalIncome(editTransaction.income)
+      if (editTransaction) {
+        setDate(editTransaction.date)
+        setDescription(editTransaction.description)
+        setCategoryId(editTransaction.category_id)
+        setAccountId(editTransaction.account_id)
+        setExpense(editTransaction.expense?.toString() ?? '')
+        setIncome(editTransaction.income?.toString() ?? '')
+        setDollarRate(editTransaction.dollar_rate.toString())
+        setOriginalAccountId(editTransaction.account_id)
+        setOriginalExpense(editTransaction.expense)
+        setOriginalIncome(editTransaction.income)
 
-      const { data: existingLines } = await supabase
-        .from('transaction_products')
-        .select('product_id, quantity')
-        .eq('transaction_id', editTransaction.id)
+        const { data: existingLines } = await supabase
+          .from('transaction_products')
+          .select('product_id, quantity')
+          .eq('transaction_id', editTransaction.id)
 
-      if (existingLines) {
-        setProductLines(existingLines.map((l) => ({
-          productId: l.product_id,
-          quantity: l.quantity.toString(),
-        })))
+        if (existingLines) {
+          setProductLines(
+            existingLines.map((l) => ({
+              productId: l.product_id,
+              quantity: l.quantity.toString(),
+            }))
+          )
+        }
+      } else {
+        if (accs.length > 0) setAccountId(accs[0]?.id ?? '')
+        if (cats.length > 0) setCategoryId(cats[0]?.id ?? '')
       }
-    } else {
-      // Set defaults for new transaction
-      if (accountsRes.data && accountsRes.data.length > 0) {
-        setAccountId(accountsRes.data[0]?.id || '')
-      }
-      if (categoriesRes.data && categoriesRes.data.length > 0) {
-        setCategoryId(categoriesRes.data[0]?.id || '')
-      }
+    } catch (err) {
+      toast.error('Failed to load form data')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [editTransaction])
 
   useEffect(() => {
-    if (isOpen) {
-      fetchData()
-    }
+    if (isOpen) fetchData()
   }, [isOpen, fetchData])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
 
   function addProductLine() {
     setProductLines((prev) => [...prev, { productId: '', quantity: '1' }])
@@ -116,14 +125,9 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
   }
 
   async function saveProductLines(transactionId: string) {
-    await supabase
-      .from('transaction_products')
-      .delete()
-      .eq('transaction_id', transactionId)
-
+    await supabase.from('transaction_products').delete().eq('transaction_id', transactionId)
     const validLines = productLines.filter((l) => l.productId && l.quantity)
     if (validLines.length === 0) return
-
     await supabase.from('transaction_products').insert(
       validLines.map((l) => ({
         transaction_id: transactionId,
@@ -145,139 +149,118 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
     }
   }
 
+  function validate(): string | null {
+    if (!description.trim()) return 'Description is required'
+    if (description.length > 120) return 'Description must be under 120 characters'
+    if (!expense && !income) return 'Enter an expense or income amount'
+    if (expense && parseFloat(expense) <= 0) return 'Expense must be greater than 0'
+    if (income && parseFloat(income) <= 0) return 'Income must be greater than 0'
+    if (!dollarRate || parseFloat(dollarRate) <= 0) return 'Dollar rate must be greater than 0'
+    return null
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+
+    const validationError = validate()
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+
     setSubmitting(true)
 
     const expenseAmount = expense ? parseFloat(expense) : null
     const incomeAmount = income ? parseFloat(income) : null
 
-    if (editTransaction) {
-      // EDIT MODE: Update existing transaction
-      const account = accounts.find((a) => a.id === accountId)
-      const originalAccount = accounts.find((a) => a.id === originalAccountId)
+    try {
+      if (editTransaction) {
+        const account = accounts.find((a) => a.id === accountId)
+        const originalAccount = accounts.find((a) => a.id === originalAccountId)
+        const oldBalanceChange = (originalIncome ?? 0) - (originalExpense ?? 0)
+        const newBalanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
 
-      // Calculate balance adjustments
-      const oldBalanceChange = (originalIncome ?? 0) - (originalExpense ?? 0)
-      const newBalanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
-
-      // If account changed, revert old account and update new account
-      if (originalAccountId !== accountId) {
-        // Revert old account balance
-        if (originalAccount) {
-          const revertedBalance = originalAccount.balance - oldBalanceChange
-          await supabase
-            .from('accounts')
-            .update({ balance: revertedBalance })
-            .eq('id', originalAccountId)
+        if (originalAccountId !== accountId) {
+          if (originalAccount && originalAccountId) {
+            await updateAccountBalance(originalAccountId, originalAccount.balance - oldBalanceChange)
+          }
+          if (account) {
+            const newBalance = account.balance + newBalanceChange
+            await updateAccountBalance(accountId, newBalance)
+            await updateTransaction(editTransaction.id, {
+              date,
+              description,
+              category_id: categoryId,
+              account_id: accountId,
+              expense: expenseAmount,
+              income: incomeAmount,
+              dollar_rate: parseFloat(dollarRate),
+              balance_snapshot: newBalance,
+            })
+          }
+        } else {
+          if (account) {
+            const balanceDiff = newBalanceChange - oldBalanceChange
+            const newBalance = account.balance + balanceDiff
+            await updateAccountBalance(accountId, newBalance)
+            await updateTransaction(editTransaction.id, {
+              date,
+              description,
+              category_id: categoryId,
+              account_id: accountId,
+              expense: expenseAmount,
+              income: incomeAmount,
+              dollar_rate: parseFloat(dollarRate),
+              balance_snapshot: newBalance,
+            })
+          }
         }
-        // Update new account balance
-        if (account) {
-          const newBalance = account.balance + newBalanceChange
-          await supabase
-            .from('accounts')
-            .update({ balance: newBalance })
-            .eq('id', accountId)
-
-          // Update transaction with new balance snapshot
-          await supabase.from('transactions').update({
-            date,
-            description,
-            category_id: categoryId,
-            account_id: accountId,
-            expense: expenseAmount,
-            income: incomeAmount,
-            dollar_rate: parseFloat(dollarRate),
-            balance_snapshot: newBalance,
-          }).eq('id', editTransaction.id)
-        }
+        await saveProductLines(editTransaction.id)
       } else {
-        // Same account, just adjust the difference
-        if (account) {
-          const balanceDiff = newBalanceChange - oldBalanceChange
-          const newBalance = account.balance + balanceDiff
-          await supabase
-            .from('accounts')
-            .update({ balance: newBalance })
-            .eq('id', accountId)
+        const account = accounts.find((a) => a.id === accountId)
+        const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
+        const newBalance = account ? account.balance + balanceChange : null
 
-          // Update transaction with new balance snapshot
-          await supabase.from('transactions').update({
-            date,
-            description,
-            category_id: categoryId,
-            account_id: accountId,
-            expense: expenseAmount,
-            income: incomeAmount,
-            dollar_rate: parseFloat(dollarRate),
-            balance_snapshot: newBalance,
-          }).eq('id', editTransaction.id)
+        const txId = await createTransaction({
+          date,
+          description,
+          category_id: categoryId,
+          account_id: accountId,
+          expense: expenseAmount,
+          income: incomeAmount,
+          dollar_rate: parseFloat(dollarRate),
+          balance_snapshot: newBalance,
+        })
+
+        if (account && newBalance !== null) {
+          await updateAccountBalance(accountId, newBalance)
         }
-      }
-      await saveProductLines(editTransaction.id)
-    } else {
-      // CREATE MODE: Insert new transaction
-      const account = accounts.find((a) => a.id === accountId)
-      const balanceChange = (incomeAmount ?? 0) - (expenseAmount ?? 0)
-      const newBalance = account ? account.balance + balanceChange : null
+        await saveProductLines(txId)
 
-      const { data: txData, error: txError } = await supabase.from('transactions').insert({
-        date,
-        description,
-        category_id: categoryId,
-        account_id: accountId,
-        expense: expenseAmount,
-        income: incomeAmount,
-        dollar_rate: parseFloat(dollarRate),
-        balance_snapshot: newBalance,
-      }).select('id').single()
-
-      if (txError) {
-        console.error('Error creating transaction:', txError)
-        setSubmitting(false)
-        return
-      }
-
-      // Update account balance
-      if (account && newBalance !== null) {
-        const { error: updateError } = await supabase
-          .from('accounts')
-          .update({ balance: newBalance })
-          .eq('id', accountId)
-
-        if (updateError) {
-          console.error('Error updating account balance:', updateError)
+        if (selectedRecurringPaymentId) {
+          await toggleRecurringPaid(selectedRecurringPaymentId, true)
         }
       }
 
-      // Save product lines
-      if (txData?.id) {
-        await saveProductLines(txData.id)
-      }
+      setDescription('')
+      setExpense('')
+      setIncome('')
+      setDate(new Date().toISOString().split('T')[0] ?? '')
+      setSelectedRecurringPaymentId('')
+      setProductLines([])
+      setOriginalAccountId(null)
+      setOriginalExpense(null)
+      setOriginalIncome(null)
 
-      // Mark recurring payment as paid if one was selected
-      if (selectedRecurringPaymentId) {
-        await supabase
-          .from('recurring_payments')
-          .update({ is_paid: true })
-          .eq('id', selectedRecurringPaymentId)
-      }
+      toast.success(editTransaction ? 'Transaction updated' : 'Transaction created')
+      onSaved()
+      onClose()
+    } catch (err) {
+      toast.error('Failed to save transaction')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-
-    // Reset form
-    setDescription('')
-    setExpense('')
-    setIncome('')
-    setDate(new Date().toISOString().split('T')[0] ?? '')
-    setSelectedRecurringPaymentId('')
-    setProductLines([])
-    setOriginalAccountId(null)
-    setOriginalExpense(null)
-    setOriginalIncome(null)
-
-    setSubmitting(false)
-    onSaved()
-    onClose()
   }
 
   if (!isOpen) return null
@@ -296,25 +279,17 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {!editTransaction && recurringPayments.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('recurringPayment')}</label>
-                  <select
-                    value={selectedRecurringPaymentId}
-                    onChange={(e) => handleRecurringPaymentSelect(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">{t('selectRecurringPayment')}</option>
-                    {recurringPayments.map((payment) => (
-                      <option key={payment.id} value={payment.id}>
-                        {payment.name} - ${payment.amount.toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <RecurringPaymentSelector
+                  recurringPayments={recurringPayments}
+                  selectedId={selectedRecurringPaymentId}
+                  onSelect={handleRecurringPaymentSelect}
+                />
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('date')}
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -325,7 +300,9 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('description')}</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('description')}
+                </label>
                 <input
                   type="text"
                   value={description}
@@ -337,7 +314,9 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('category')}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('category')}
+                  </label>
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
@@ -352,7 +331,9 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('account')}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('account')}
+                  </label>
                   <select
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
@@ -368,89 +349,23 @@ export function TransactionForm({ isOpen, onClose, onSaved, editTransaction }: T
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('expenseAmount')}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={expense}
-                    onChange={(e) => setExpense(normalizeNumberInput(e.target.value))}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('incomeAmount')}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={income}
-                    onChange={(e) => setIncome(normalizeNumberInput(e.target.value))}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
+              <AmountFields
+                expense={expense}
+                income={income}
+                dollarRate={dollarRate}
+                onExpenseChange={setExpense}
+                onIncomeChange={setIncome}
+                onDollarRateChange={setDollarRate}
+              />
 
               {allProducts.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t('addProducts')}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addProductLine}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                    >
-                      + {t('addProductLine')}
-                    </button>
-                  </div>
-                  {productLines.map((line, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <select
-                        value={line.productId}
-                        onChange={(e) => updateProductLine(index, 'productId', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
-                      >
-                        <option value="">{t('selectProduct')}</option>
-                        {allProducts.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}{p.unit ? ` (${p.unit})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={line.quantity}
-                          onChange={(e) => updateProductLine(index, 'quantity', normalizeNumberInput(e.target.value))}
-                          placeholder="1"
-                          className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm text-right"
-                        />
-                        {(() => {
-                          const product = allProducts.find((p) => p.id === line.productId)
-                          return product?.unit ? (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{product.unit}</span>
-                          ) : null
-                        })()}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeProductLine(index)}
-                        className="px-2 py-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <ProductLineEditor
+                  productLines={productLines}
+                  products={allProducts}
+                  onAdd={addProductLine}
+                  onUpdate={updateProductLine}
+                  onRemove={removeProductLine}
+                />
               )}
 
               <div className="flex justify-end gap-3 pt-4">

@@ -2,12 +2,19 @@ import { supabase } from './supabase'
 
 const AUTH_KEY = 'bitacora_authenticated'
 
+interface SessionData {
+  hash: string
+  expiresAt: number
+}
+
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(password)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 export async function login(password: string): Promise<boolean> {
@@ -19,12 +26,13 @@ export async function login(password: string): Promise<boolean> {
     .single()
 
   if (error || !data) {
-    console.error('Failed to fetch app settings:', error)
+    console.error('Failed to fetch app settings')
     return false
   }
 
   if (hashedInput === data.master_password_hash) {
-    localStorage.setItem(AUTH_KEY, hashedInput)
+    const session: SessionData = { hash: hashedInput, expiresAt: Date.now() + SESSION_TTL_MS }
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session))
     return true
   }
 
@@ -36,19 +44,36 @@ export function logout(): void {
 }
 
 export function isAuthenticated(): boolean {
-  return localStorage.getItem(AUTH_KEY) !== null
+  const stored = localStorage.getItem(AUTH_KEY)
+  if (!stored) return false
+  try {
+    const { expiresAt } = JSON.parse(stored) as SessionData
+    if (Date.now() > expiresAt) {
+      localStorage.removeItem(AUTH_KEY)
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function verifySession(): Promise<boolean> {
-  const storedHash = localStorage.getItem(AUTH_KEY)
-  if (!storedHash) return false
-
-  const { data, error } = await supabase
-    .from('app_settings')
-    .select('master_password_hash')
-    .single()
-
-  if (error || !data) return false
-
-  return storedHash === data.master_password_hash
+  const stored = localStorage.getItem(AUTH_KEY)
+  if (!stored) return false
+  try {
+    const { hash, expiresAt } = JSON.parse(stored) as SessionData
+    if (Date.now() > expiresAt) {
+      localStorage.removeItem(AUTH_KEY)
+      return false
+    }
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('master_password_hash')
+      .single()
+    if (error || !data) return false
+    return hash === data.master_password_hash
+  } catch {
+    return false
+  }
 }

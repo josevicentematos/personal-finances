@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { SummaryPage } from './pages/SummaryPage'
@@ -23,14 +24,14 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<SummaryPage />} />
-        <Route path="transactions" element={<TransactionsPage />} />
-        <Route path="accounts" element={<AccountsPage />} />
-        <Route path="categories" element={<CategoriesPage />} />
-        <Route path="recurrents" element={<RecurringPage />} />
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="calendar" element={<CalendarPage />} />
+        <Route index element={<ErrorBoundary><SummaryPage /></ErrorBoundary>} />
+        <Route path="transactions" element={<ErrorBoundary><TransactionsPage /></ErrorBoundary>} />
+        <Route path="accounts" element={<ErrorBoundary><AccountsPage /></ErrorBoundary>} />
+        <Route path="categories" element={<ErrorBoundary><CategoriesPage /></ErrorBoundary>} />
+        <Route path="recurrents" element={<ErrorBoundary><RecurringPage /></ErrorBoundary>} />
+        <Route path="products" element={<ErrorBoundary><ProductsPage /></ErrorBoundary>} />
+        <Route path="settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
+        <Route path="calendar" element={<ErrorBoundary><CalendarPage /></ErrorBoundary>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

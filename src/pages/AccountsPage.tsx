@@ -1,12 +1,22 @@
-import { useState, useEffect, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect, FormEvent, useCallback } from 'react'
 import { Account } from '@/types'
 import { formatCurrency, normalizeNumberInput } from '@/lib/format'
+import {
+  fetchAccounts,
+  createAccount,
+  updateAccountBalance,
+  updateAccountName,
+  toggleAccountMain,
+  toggleAccountSummary,
+  deleteAccount,
+  reorderAccounts,
+} from '@/services/accounts'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import toast from 'react-hot-toast'
 import {
   DndContext,
   closestCenter,
@@ -34,119 +44,95 @@ export function AccountsPage() {
   const [confirmEditId, setConfirmEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const { t } = useTranslation()
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  useEffect(() => {
-    fetchAccounts()
+  const loadAccounts = useCallback(async () => {
+    try {
+      const data = await fetchAccounts()
+      setAccounts(data)
+    } catch (err) {
+      toast.error('Failed to load accounts')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  async function fetchAccounts() {
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .order('sort_order', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching accounts:', error)
-    } else {
-      setAccounts(data ?? [])
-    }
-    setLoading(false)
-  }
+  useEffect(() => {
+    loadAccounts()
+  }, [loadAccounts])
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
+    const trimmed = newName.trim()
+    if (!trimmed) { toast.error('Account name is required'); return }
+    if (trimmed.length > 60) { toast.error('Account name must be under 60 characters'); return }
+
     setSubmitting(true)
-
-    const maxOrder = accounts.reduce((max, a) => Math.max(max, a.sort_order), -1)
-
-    const { error } = await supabase.from('accounts').insert({
-      name: newName,
-      balance: parseFloat(newBalance) || 0,
-      sort_order: maxOrder + 1,
-    })
-
-    if (error) {
-      console.error('Error adding account:', error)
-    } else {
+    try {
+      const maxOrder = accounts.reduce((max, a) => Math.max(max, a.sort_order), -1)
+      await createAccount(trimmed, parseFloat(newBalance) || 0, maxOrder + 1)
       setNewName('')
       setNewBalance('')
-      fetchAccounts()
+      toast.success('Account added')
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to add account')
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function handleUpdateBalance(id: string) {
-    const { error } = await supabase
-      .from('accounts')
-      .update({ balance: parseFloat(editBalance) })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error updating balance:', error)
-    } else {
+    try {
+      await updateAccountBalance(id, parseFloat(editBalance))
       setEditingId(null)
-      fetchAccounts()
+      toast.success('Balance updated')
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to update balance')
+      console.error(err)
     }
   }
 
   async function handleToggleMain(id: string, currentIsMain: boolean) {
-    setErrorMessage(null)
-    const { data, error } = await supabase
-      .from('accounts')
-      .update({ is_main: !currentIsMain })
-      .eq('id', id)
-      .select()
-
-    if (error) {
-      console.error('Error toggling main account:', error)
-      setErrorMessage(`Failed to update: ${error.message}`)
-    } else if (!data || data.length === 0) {
-      console.error('No rows updated for account:', id)
-      setErrorMessage('Failed to update: No rows were modified.')
-    } else {
-      fetchAccounts()
+    try {
+      await toggleAccountMain(id, !currentIsMain)
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to update account')
+      console.error(err)
     }
   }
 
   async function handleToggleShowInSummary(id: string, currentShowInSummary: boolean) {
-    setErrorMessage(null)
-    const { data, error } = await supabase
-      .from('accounts')
-      .update({ show_in_summary: !currentShowInSummary })
-      .eq('id', id)
-      .select()
-
-    if (error) {
-      console.error('Error toggling show in summary:', error)
-      setErrorMessage(`Failed to update: ${error.message}`)
-    } else if (!data || data.length === 0) {
-      console.error('No rows updated for account:', id)
-      setErrorMessage('Failed to update: No rows were modified.')
-    } else {
-      fetchAccounts()
+    try {
+      await toggleAccountSummary(id, !currentShowInSummary)
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to update account')
+      console.error(err)
     }
   }
 
   async function handleDelete() {
     if (!deleteId) return
-
-    const { error } = await supabase.from('accounts').delete().eq('id', deleteId)
-
-    if (error) {
-      console.error('Error deleting account:', error)
-    } else {
-      fetchAccounts()
+    try {
+      await deleteAccount(deleteId)
+      toast.success('Account deleted')
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to delete account')
+      console.error(err)
+    } finally {
+      setDeleteId(null)
     }
-    setDeleteId(null)
   }
 
   function startEditName(account: Account) {
@@ -160,20 +146,22 @@ export function AccountsPage() {
 
   async function handleEditName() {
     if (!confirmEditId) return
+    const trimmed = editName.trim()
+    if (!trimmed) { toast.error('Account name is required'); return }
+    if (trimmed.length > 60) { toast.error('Account name must be under 60 characters'); return }
 
-    const { error } = await supabase
-      .from('accounts')
-      .update({ name: editName })
-      .eq('id', confirmEditId)
-
-    if (error) {
-      console.error('Error updating account name:', error)
-    } else {
-      fetchAccounts()
+    try {
+      await updateAccountName(confirmEditId, trimmed)
+      toast.success('Account renamed')
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to rename account')
+      console.error(err)
+    } finally {
+      setConfirmEditId(null)
+      setEditingNameId(null)
+      setEditName('')
     }
-    setConfirmEditId(null)
-    setEditingNameId(null)
-    setEditName('')
   }
 
   function cancelEditName() {
@@ -184,33 +172,23 @@ export function AccountsPage() {
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-
     if (!over || active.id === over.id) return
 
     const oldIndex = accounts.findIndex((a) => a.id === active.id)
     const newIndex = accounts.findIndex((a) => a.id === over.id)
-
     if (oldIndex === -1 || newIndex === -1) return
 
-    // Reorder locally first for immediate feedback
     const newAccounts = [...accounts]
     const [movedItem] = newAccounts.splice(oldIndex, 1)
-    if (movedItem) {
-      newAccounts.splice(newIndex, 0, movedItem)
-    }
+    if (movedItem) newAccounts.splice(newIndex, 0, movedItem)
     setAccounts(newAccounts)
 
-    // Update sort_order in database
-    const updates = newAccounts.map((account, index) => ({
-      id: account.id,
-      sort_order: index,
-    }))
-
-    for (const update of updates) {
-      await supabase
-        .from('accounts')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id)
+    try {
+      await reorderAccounts(newAccounts.map((account, index) => ({ id: account.id, sort_order: index })))
+    } catch (err) {
+      toast.error('Failed to reorder accounts')
+      console.error(err)
+      await loadAccounts()
     }
   }
 
@@ -225,23 +203,12 @@ export function AccountsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('accounts')}</h1>
         <div className="text-right">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('mainAccountsBalance')}</p>
-          <p className="text-xl font-semibold text-gray-900 dark:text-white">{formatCurrency(totalBalance)}</p>
+          <p className="text-xl font-semibold text-gray-900 dark:text-white">
+            {formatCurrency(totalBalance)}
+          </p>
         </div>
       </div>
 
-      {errorMessage && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {errorMessage}
-          <button
-            onClick={() => setErrorMessage(null)}
-            className="ml-4 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-          >
-            {t('dismiss')}
-          </button>
-        </div>
-      )}
-
-      {/* Add Account Form */}
       <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
@@ -271,18 +238,10 @@ export function AccountsPage() {
       </form>
 
       {accounts.length === 0 ? (
-        <EmptyState
-          icon="🏦"
-          title={t('noAccountsYet')}
-          description={t('addFirstAccount')}
-        />
+        <EmptyState icon="🏦" title={t('noAccountsYet')} description={t('addFirstAccount')} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -323,7 +282,9 @@ export function AccountsPage() {
                         <input
                           type="checkbox"
                           checked={account.show_in_summary ?? false}
-                          onChange={() => handleToggleShowInSummary(account.id, account.show_in_summary ?? false)}
+                          onChange={() =>
+                            handleToggleShowInSummary(account.id, account.show_in_summary ?? false)
+                          }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       </td>
@@ -361,7 +322,9 @@ export function AccountsPage() {
                               type="text"
                               inputMode="decimal"
                               value={editBalance}
-                              onChange={(e) => setEditBalance(normalizeNumberInput(e.target.value))}
+                              onChange={(e) =>
+                                setEditBalance(normalizeNumberInput(e.target.value))
+                              }
                               className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                               autoFocus
                             />
@@ -385,7 +348,9 @@ export function AccountsPage() {
                               setEditBalance(account.balance.toString())
                             }}
                             className={`cursor-pointer hover:underline ${
-                              account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                              account.balance >= 0
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
                             }`}
                           >
                             {formatCurrency(account.balance)}
