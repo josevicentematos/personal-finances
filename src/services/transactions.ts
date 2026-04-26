@@ -3,6 +3,12 @@ import { Transaction, TransactionWithRelations } from '@/types'
 
 const PAGE_SIZE = 50
 
+function nextMonthStart(month: string): string {
+  const [y, m] = month.split('-')
+  const d = new Date(parseInt(y!), parseInt(m!) - 1 + 1, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
 export async function fetchTransactionMonths(): Promise<string[]> {
   const { data, error } = await supabase
     .from('transactions')
@@ -19,14 +25,12 @@ export async function fetchTransactionsByMonth(
 ): Promise<{ data: TransactionWithRelations[]; hasMore: boolean }> {
   const from = page * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
-  const startDate = `${month}-01`
-  const endDate = `${month}-31`
 
   const { data, error, count } = await supabase
     .from('transactions')
     .select('*, category:categories(*), account:accounts(*)', { count: 'exact' })
-    .gte('date', startDate)
-    .lte('date', endDate)
+    .gte('date', `${month}-01`)
+    .lt('date', nextMonthStart(month))
     .order('date', { ascending: true })
     .order('created_at', { ascending: true })
     .range(from, to)
@@ -51,7 +55,7 @@ export async function fetchCurrentMonthTransactions(month: string): Promise<Tran
     .from('transactions')
     .select('*, category:categories(*), account:accounts(*)')
     .gte('date', `${month}-01`)
-    .lte('date', `${month}-31`)
+    .lt('date', nextMonthStart(month))
     .order('date', { ascending: false })
   if (error) throw error
   return data ?? []
