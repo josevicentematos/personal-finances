@@ -43,6 +43,23 @@ export interface RecurringPayment {
   created_at: string
 }
 
+export interface Product {
+  id: string
+  name: string
+  unit: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface TransactionProduct {
+  id: string
+  transaction_id: string
+  product_id: string
+  quantity: number
+  created_at: string
+  product?: Product
+}
+
 export interface AppSettings {
   id: string
   dollar_rate: number
