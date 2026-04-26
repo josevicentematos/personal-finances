@@ -231,10 +231,10 @@ export function RecurringPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('recurringPayments')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('recurringPayments')}</h1>
 
       {/* Add Payment Form */}
-      <form onSubmit={handleAdd} className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
@@ -242,7 +242,7 @@ export function RecurringPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
           />
           <input
             type="text"
@@ -251,7 +251,7 @@ export function RecurringPage() {
             value={newAmount}
             onChange={(e) => setNewAmount(normalizeNumberInput(e.target.value))}
             required
-            className="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
           />
           <button
             type="submit"
@@ -270,31 +270,31 @@ export function RecurringPage() {
           description={t('addRecurringExpenses')}
         />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-6">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <DragHandleHeader />
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('paid')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('name')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('amount')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 <SortableContext
                   items={payments.map((p) => p.id)}
                   strategy={verticalListSortingStrategy}
@@ -303,7 +303,7 @@ export function RecurringPage() {
                     <SortableRow
                       key={payment.id}
                       id={payment.id}
-                      className={payment.is_paid ? 'bg-gray-50' : ''}
+                      className={payment.is_paid ? 'bg-gray-50 dark:bg-gray-700/50' : ''}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
@@ -315,7 +315,7 @@ export function RecurringPage() {
                       </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                          payment.is_paid ? 'text-gray-400 line-through' : 'text-gray-900'
+                          payment.is_paid ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
                         }`}
                       >
                         {editingPayment?.id === payment.id ? (
@@ -323,7 +323,7 @@ export function RecurringPage() {
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                           />
                         ) : (
                           payment.name
@@ -331,7 +331,7 @@ export function RecurringPage() {
                       </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
-                          payment.is_paid ? 'text-gray-400' : 'text-gray-900'
+                          payment.is_paid ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'
                         }`}
                       >
                         {editingPayment?.id === payment.id ? (
@@ -340,7 +340,7 @@ export function RecurringPage() {
                             inputMode="decimal"
                             value={editAmount}
                             onChange={(e) => setEditAmount(normalizeNumberInput(e.target.value))}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-right"
+                            className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-right"
                           />
                         ) : (
                           formatCurrency(payment.amount)
@@ -352,13 +352,13 @@ export function RecurringPage() {
                             <button
                               onClick={handleSaveEdit}
                               disabled={submitting}
-                              className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                              className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 disabled:opacity-50"
                             >
                               {t('save')}
                             </button>
                             <button
                               onClick={cancelEditing}
-                              className="text-gray-600 hover:text-gray-800"
+                              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
                             >
                               {t('cancel')}
                             </button>
@@ -367,13 +367,13 @@ export function RecurringPage() {
                           <>
                             <button
                               onClick={() => startEditing(payment)}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                             >
                               {t('edit')}
                             </button>
                             <button
                               onClick={() => setDeleteId(payment.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                             >
                               {t('delete')}
                             </button>
@@ -390,21 +390,21 @@ export function RecurringPage() {
       )}
 
       {/* Real Money Calculation */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('realMoneyCalculation')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('realMoneyCalculation')}</h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600">{t('mainAccountsBalanceLabel')}</span>
-            <span className="font-medium">
+            <span className="text-gray-600 dark:text-gray-400">{t('mainAccountsBalanceLabel')}</span>
+            <span className="font-medium dark:text-white">
               {mainAccounts.length > 0 ? formatCurrency(mainAccountsBalance) : t('noMainAccounts')}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">{t('unpaidRecurringPayments')}</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('unpaidRecurringPayments')}</span>
             <span className="font-medium text-red-600">- {formatCurrency(unpaidTotal)}</span>
           </div>
-          <div className="border-t pt-2 flex justify-between">
-            <span className="font-semibold text-gray-900">{t('realMoney')}</span>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
+            <span className="font-semibold text-gray-900 dark:text-white">{t('realMoney')}</span>
             <span
               className={`font-bold text-lg ${realMoney >= 0 ? 'text-green-600' : 'text-red-600'}`}
             >
