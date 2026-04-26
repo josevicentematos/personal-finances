@@ -5,6 +5,8 @@ CREATE TABLE accounts (
   balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
   is_main BOOLEAN NOT NULL DEFAULT FALSE,
   show_in_summary BOOLEAN NOT NULL DEFAULT FALSE,
+  color TEXT DEFAULT NULL,
+  color_dark TEXT DEFAULT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -14,6 +16,7 @@ CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   color TEXT DEFAULT '#E8F4FD',
+  color_dark TEXT DEFAULT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

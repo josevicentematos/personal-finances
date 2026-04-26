@@ -10,8 +10,21 @@ export async function fetchAccounts(): Promise<Account[]> {
   return data ?? []
 }
 
-export async function createAccount(name: string, balance: number, sortOrder: number): Promise<void> {
-  const { error } = await supabase.from('accounts').insert({ name, balance, sort_order: sortOrder })
+export async function createAccount(
+  name: string,
+  balance: number,
+  sortOrder: number,
+  color?: string | null,
+  colorDark?: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('accounts')
+    .insert({ name, balance, sort_order: sortOrder, color: color ?? null, color_dark: colorDark ?? null })
+  if (error) throw error
+}
+
+export async function updateAccountColor(id: string, color: string | null, colorDark: string | null): Promise<void> {
+  const { error } = await supabase.from('accounts').update({ color, color_dark: colorDark }).eq('id', id)
   if (error) throw error
 }
 

@@ -31,8 +31,8 @@ export async function fetchTransactionsByMonth(
     .select('*, category:categories(*), account:accounts(*)', { count: 'exact' })
     .gte('date', `${month}-01`)
     .lt('date', nextMonthStart(month))
-    .order('date', { ascending: true })
-    .order('created_at', { ascending: true })
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
     .range(from, to)
 
   if (error) throw error

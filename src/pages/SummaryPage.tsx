@@ -7,6 +7,7 @@ import { fetchSettings } from '@/services/settings'
 import { fetchUnpaidRecurringPayments } from '@/services/recurring'
 import { PageSpinner } from '@/components/Spinner'
 import { useTranslation } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 import toast from 'react-hot-toast'
 
 function formatUSD(amount: number): string {
@@ -31,6 +32,7 @@ export function SummaryPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const { t } = useTranslation()
+  const { isDark } = useTheme()
 
   const currentMonth = useMemo(() => {
     const now = new Date()
@@ -201,7 +203,11 @@ export function SummaryPage() {
               <div key={item.category.id} className="flex items-center gap-3">
                 <div
                   className="w-4 h-4 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.category.color || '#E8F4FD' }}
+                  style={{
+                    backgroundColor: isDark
+                      ? (item.category.color_dark ?? item.category.color)
+                      : item.category.color,
+                  }}
                 />
                 <div className="w-28 text-sm text-gray-600 dark:text-gray-400 truncate flex-shrink-0">
                   {item.category.name}
@@ -211,7 +217,9 @@ export function SummaryPage() {
                     className="h-full rounded-md transition-all duration-300"
                     style={{
                       width: `${(item.total / maxExpense) * 100}%`,
-                      backgroundColor: item.category.color || '#3B82F6',
+                      backgroundColor: isDark
+                        ? (item.category.color_dark ?? item.category.color)
+                        : item.category.color,
                     }}
                   />
                 </div>
@@ -272,8 +280,12 @@ export function SummaryPage() {
                       {tx.description}
                     </td>
                     <td
-                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700"
-                      style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 dark:text-gray-100"
+                      style={{
+                        backgroundColor: tx.category
+                          ? (isDark ? (tx.category.color_dark ?? tx.category.color) : tx.category.color) || 'transparent'
+                          : 'transparent',
+                      }}
                     >
                       {tx.category?.name ?? '-'}
                     </td>

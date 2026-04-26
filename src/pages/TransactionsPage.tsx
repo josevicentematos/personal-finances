@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { TransactionForm } from '@/components/TransactionForm'
 import { useTranslation } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 import toast from 'react-hot-toast'
 
 function formatUSD(amount: number): string {
@@ -54,6 +55,7 @@ export function TransactionsPage() {
   const [filterMaxAmount, setFilterMaxAmount] = useState('')
 
   const { t } = useTranslation()
+  const { isDark } = useTheme()
 
   const handleSetActiveMonth = useCallback(
     (month: string) => {
@@ -325,12 +327,23 @@ export function TransactionsPage() {
                       {tx.description}
                     </td>
                     <td
-                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-700"
-                      style={{ backgroundColor: tx.category?.color || 'transparent' }}
+                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 dark:text-gray-100"
+                      style={{
+                        backgroundColor: tx.category
+                          ? (isDark ? (tx.category.color_dark ?? tx.category.color) : tx.category.color) || 'transparent'
+                          : 'transparent',
+                      }}
                     >
                       {tx.category?.name ?? '-'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                    <td
+                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 dark:text-gray-100"
+                      style={{
+                        backgroundColor: tx.account
+                          ? (isDark ? (tx.account.color_dark ?? tx.account.color) : tx.account.color) || 'transparent'
+                          : 'transparent',
+                      }}
+                    >
                       {tx.account?.name ?? '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400">

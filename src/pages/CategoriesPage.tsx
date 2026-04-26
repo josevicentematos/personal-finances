@@ -23,7 +23,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { ColorPicker } from '@/components/ColorPicker'
-import { DEFAULT_CATEGORY_COLOR } from '@/lib/colors'
+import { DEFAULT_CATEGORY_COLOR, DEFAULT_COLOR_PAIR, getDarkColor } from '@/lib/colors'
 import { useTranslation } from '@/lib/i18n'
 import toast from 'react-hot-toast'
 import {
@@ -52,11 +52,13 @@ export function CategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
+  const [newColorDark, setNewColorDark] = useState<string>(DEFAULT_COLOR_PAIR.dark)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteWarning, setDeleteWarning] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
+  const [editColorDark, setEditColorDark] = useState<string>(DEFAULT_COLOR_PAIR.dark)
   const [confirmEditId, setConfirmEditId] = useState<string | null>(null)
   const [editWarning, setEditWarning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -130,9 +132,10 @@ export function CategoriesPage() {
     setSubmitting(true)
     try {
       const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order), -1)
-      await createCategory(trimmed, newColor, maxOrder + 1)
+      await createCategory(trimmed, newColor, newColorDark, maxOrder + 1)
       setNewName('')
       setNewColor(DEFAULT_CATEGORY_COLOR)
+      setNewColorDark(DEFAULT_COLOR_PAIR.dark)
       toast.success('Category added')
       await loadData()
     } catch (err) {
@@ -172,7 +175,9 @@ export function CategoriesPage() {
   function startEdit(category: CategoryWithTotals) {
     setEditingId(category.id)
     setEditName(category.name)
-    setEditColor(category.color || DEFAULT_CATEGORY_COLOR)
+    const light = category.color || DEFAULT_CATEGORY_COLOR
+    setEditColor(light)
+    setEditColorDark(category.color_dark ?? getDarkColor(light))
   }
 
   async function checkAndConfirmEdit() {
@@ -194,7 +199,7 @@ export function CategoriesPage() {
     if (trimmed.length > 60) { toast.error('Category name must be under 60 characters'); return }
 
     try {
-      await updateCategory(confirmEditId, trimmed, editColor)
+      await updateCategory(confirmEditId, trimmed, editColor, editColorDark)
       toast.success('Category updated')
       await loadData()
     } catch (err) {
@@ -209,6 +214,7 @@ export function CategoriesPage() {
     setEditingId(null)
     setEditName('')
     setEditColor(DEFAULT_CATEGORY_COLOR)
+    setEditColorDark(DEFAULT_COLOR_PAIR.dark)
     setConfirmEditId(null)
     setEditWarning(false)
   }
@@ -284,7 +290,11 @@ export function CategoriesPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('color')}
             </label>
-            <ColorPicker value={newColor} onChange={setNewColor} />
+            <ColorPicker
+              value={newColor}
+              valueDark={newColorDark}
+              onChange={(light, dark) => { setNewColor(light); setNewColorDark(dark) }}
+            />
           </div>
         </div>
       </form>
@@ -325,7 +335,11 @@ export function CategoriesPage() {
                       <td className="px-4 py-4 whitespace-nowrap">
                         {editingId === category.id ? (
                           <div className="w-32">
-                            <ColorPicker value={editColor} onChange={setEditColor} />
+                            <ColorPicker
+                              value={editColor}
+                              valueDark={editColorDark}
+                              onChange={(light, dark) => { setEditColor(light); setEditColorDark(dark) }}
+                            />
                           </div>
                         ) : (
                           <div

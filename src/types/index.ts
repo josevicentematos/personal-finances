@@ -4,6 +4,8 @@ export interface Account {
   balance: number
   is_main: boolean
   show_in_summary: boolean
+  color: string | null
+  color_dark: string | null
   sort_order: number
   created_at: string
 }
@@ -12,6 +14,7 @@ export interface Category {
   id: string
   name: string
   color: string
+  color_dark: string | null
   sort_order: number
   created_at: string
 }

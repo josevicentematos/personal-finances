@@ -6,16 +6,20 @@ import {
   createAccount,
   updateAccountBalance,
   updateAccountName,
+  updateAccountColor,
   toggleAccountMain,
   toggleAccountSummary,
   deleteAccount,
   reorderAccounts,
 } from '@/services/accounts'
+import { DEFAULT_CATEGORY_COLOR, DEFAULT_COLOR_PAIR, getDarkColor } from '@/lib/colors'
 import { PageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ColorPicker } from '@/components/ColorPicker'
 import { SortableRow, DragHandleHeader } from '@/components/SortableRow'
 import { useTranslation } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 import toast from 'react-hot-toast'
 import {
   DndContext,
@@ -37,14 +41,20 @@ export function AccountsPage() {
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [newBalance, setNewBalance] = useState('')
+  const [newColor, setNewColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
+  const [newColorDark, setNewColorDark] = useState<string>(DEFAULT_COLOR_PAIR.dark)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBalance, setEditBalance] = useState('')
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [confirmEditId, setConfirmEditId] = useState<string | null>(null)
+  const [editingColorId, setEditingColorId] = useState<string | null>(null)
+  const [editColor, setEditColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
+  const [editColorDark, setEditColorDark] = useState<string>(DEFAULT_COLOR_PAIR.dark)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const { t } = useTranslation()
+  const { isDark } = useTheme()
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -76,9 +86,11 @@ export function AccountsPage() {
     setSubmitting(true)
     try {
       const maxOrder = accounts.reduce((max, a) => Math.max(max, a.sort_order), -1)
-      await createAccount(trimmed, parseFloat(newBalance) || 0, maxOrder + 1)
+      await createAccount(trimmed, parseFloat(newBalance) || 0, maxOrder + 1, newColor, newColorDark)
       setNewName('')
       setNewBalance('')
+      setNewColor(DEFAULT_CATEGORY_COLOR)
+      setNewColorDark(DEFAULT_COLOR_PAIR.dark)
       toast.success('Account added')
       await loadAccounts()
     } catch (err) {
@@ -170,6 +182,30 @@ export function AccountsPage() {
     setConfirmEditId(null)
   }
 
+  function startEditColor(account: Account) {
+    setEditingColorId(account.id)
+    const light = account.color || DEFAULT_CATEGORY_COLOR
+    setEditColor(light)
+    setEditColorDark(account.color_dark ?? getDarkColor(light))
+  }
+
+  async function handleSaveColor(id: string) {
+    try {
+      await updateAccountColor(id, editColor, editColorDark)
+      toast.success('Color updated')
+      await loadAccounts()
+    } catch (err) {
+      toast.error('Failed to update color')
+      console.error(err)
+    } finally {
+      setEditingColorId(null)
+    }
+  }
+
+  function cancelEditColor() {
+    setEditingColorId(null)
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -210,30 +246,42 @@ export function AccountsPage() {
       </div>
 
       <form onSubmit={handleAdd} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder={t('accountName')}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          />
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder={t('initialBalance')}
-            value={newBalance}
-            onChange={(e) => setNewBalance(normalizeNumberInput(e.target.value))}
-            className="w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {t('addAccount')}
-          </button>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder={t('accountName')}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              required
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder={t('initialBalance')}
+              value={newBalance}
+              onChange={(e) => setNewBalance(normalizeNumberInput(e.target.value))}
+              className="w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {t('addAccount')}
+            </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('color')}
+            </label>
+            <ColorPicker
+              value={newColor}
+              valueDark={newColorDark}
+              onChange={(light, dark) => { setNewColor(light); setNewColorDark(dark) }}
+            />
+          </div>
         </div>
       </form>
 
@@ -252,6 +300,9 @@ export function AccountsPage() {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('showInSummary')}
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('color')}
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('name')}
                   </th>
@@ -268,112 +319,156 @@ export function AccountsPage() {
                   items={accounts.map((a) => a.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {accounts.map((account) => (
-                    <SortableRow key={account.id} id={account.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <input
-                          type="checkbox"
-                          checked={account.is_main ?? false}
-                          onChange={() => handleToggleMain(account.id, account.is_main ?? false)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <input
-                          type="checkbox"
-                          checked={account.show_in_summary ?? false}
-                          onChange={() =>
-                            handleToggleShowInSummary(account.id, account.show_in_summary ?? false)
-                          }
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {editingNameId === account.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                              autoFocus
-                            />
+                  {accounts.map((account) => {
+                    const displayColor = isDark ? account.color_dark : account.color
+                    return (
+                      <SortableRow key={account.id} id={account.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <input
+                            type="checkbox"
+                            checked={account.is_main ?? false}
+                            onChange={() => handleToggleMain(account.id, account.is_main ?? false)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <input
+                            type="checkbox"
+                            checked={account.show_in_summary ?? false}
+                            onChange={() =>
+                              handleToggleShowInSummary(account.id, account.show_in_summary ?? false)
+                            }
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          {editingColorId === account.id ? (
+                            <div className="space-y-2">
+                              <ColorPicker
+                                value={editColor}
+                                valueDark={editColorDark}
+                                onChange={(light, dark) => { setEditColor(light); setEditColorDark(dark) }}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleSaveColor(account.id)}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                  {t('save')}
+                                </button>
+                                <button
+                                  onClick={cancelEditColor}
+                                  className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+                                >
+                                  {t('cancel')}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
                             <button
-                              onClick={confirmEditName}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              onClick={() => startEditColor(account)}
+                              className="flex items-center gap-1.5 group"
+                              title="Click to change color"
                             >
-                              {t('save')}
+                              <div
+                                className="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 group-hover:ring-2 group-hover:ring-blue-400 transition-all"
+                                style={{
+                                  background: displayColor
+                                    ? `linear-gradient(135deg, ${account.color} 50%, ${account.color_dark ?? account.color} 50%)`
+                                    : undefined,
+                                  backgroundColor: displayColor ? undefined : '#e5e7eb',
+                                }}
+                              />
                             </button>
-                            <button
-                              onClick={cancelEditName}
-                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {editingNameId === account.id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                autoFocus
+                              />
+                              <button
+                                onClick={confirmEditName}
+                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              >
+                                {t('save')}
+                              </button>
+                              <button
+                                onClick={cancelEditName}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              >
+                                {t('cancel')}
+                              </button>
+                            </div>
+                          ) : (
+                            account.name
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          {editingId === account.id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={editBalance}
+                                onChange={(e) =>
+                                  setEditBalance(normalizeNumberInput(e.target.value))
+                                }
+                                className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleUpdateBalance(account.id)}
+                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              >
+                                {t('save')}
+                              </button>
+                              <button
+                                onClick={() => setEditingId(null)}
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              >
+                                {t('cancel')}
+                              </button>
+                            </div>
+                          ) : (
+                            <span
+                              onClick={() => {
+                                setEditingId(account.id)
+                                setEditBalance(account.balance.toString())
+                              }}
+                              className={`cursor-pointer hover:underline ${
+                                account.balance >= 0
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-red-600 dark:text-red-400'
+                              }`}
                             >
-                              {t('cancel')}
-                            </button>
-                          </div>
-                        ) : (
-                          account.name
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        {editingId === account.id ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={editBalance}
-                              onChange={(e) =>
-                                setEditBalance(normalizeNumberInput(e.target.value))
-                              }
-                              className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleUpdateBalance(account.id)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            >
-                              {t('save')}
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                            >
-                              {t('cancel')}
-                            </button>
-                          </div>
-                        ) : (
-                          <span
-                            onClick={() => {
-                              setEditingId(account.id)
-                              setEditBalance(account.balance.toString())
-                            }}
-                            className={`cursor-pointer hover:underline ${
-                              account.balance >= 0
-                                ? 'text-green-600 dark:text-green-400'
-                                : 'text-red-600 dark:text-red-400'
-                            }`}
+                              {formatCurrency(account.balance)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                          <button
+                            onClick={() => startEditName(account)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            disabled={editingNameId !== null}
                           >
-                            {formatCurrency(account.balance)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                        <button
-                          onClick={() => startEditName(account)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          disabled={editingNameId !== null}
-                        >
-                          {t('edit')}
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(account.id)}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                        >
-                          {t('delete')}
-                        </button>
-                      </td>
-                    </SortableRow>
-                  ))}
+                            {t('edit')}
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(account.id)}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            {t('delete')}
+                          </button>
+                        </td>
+                      </SortableRow>
+                    )
+                  })}
                 </SortableContext>
               </tbody>
             </table>

@@ -10,13 +10,28 @@ export async function fetchCategories(): Promise<Category[]> {
   return data ?? []
 }
 
-export async function createCategory(name: string, color: string, sortOrder: number): Promise<void> {
-  const { error } = await supabase.from('categories').insert({ name, color, sort_order: sortOrder })
+export async function createCategory(
+  name: string,
+  color: string,
+  colorDark: string | null,
+  sortOrder: number
+): Promise<void> {
+  const { error } = await supabase
+    .from('categories')
+    .insert({ name, color, color_dark: colorDark, sort_order: sortOrder })
   if (error) throw error
 }
 
-export async function updateCategory(id: string, name: string, color: string): Promise<void> {
-  const { error } = await supabase.from('categories').update({ name, color }).eq('id', id)
+export async function updateCategory(
+  id: string,
+  name: string,
+  color: string,
+  colorDark: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('categories')
+    .update({ name, color, color_dark: colorDark })
+    .eq('id', id)
   if (error) throw error
 }
 
