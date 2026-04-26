@@ -16,6 +16,7 @@ const translations = {
     navRecurring: 'Recurring',
     navProducts: 'Products',
     navSettings: 'Settings',
+    navCalendar: 'Calendar',
     logout: 'Logout',
 
     // Login
@@ -171,6 +172,22 @@ const translations = {
     removeProductLine: 'Remove',
     selectProduct: 'Select a product',
 
+    // Calendar page
+    calendar: 'Calendar',
+    calendarNotConfigured: 'No calendar configured',
+    calendarSetupPrompt: 'Paste your Google Calendar embed URL in Settings to get started.',
+    calendarStep1: 'Open Google Calendar on the web.',
+    calendarStep2: 'Go to Settings → Settings for my calendars → select a calendar.',
+    calendarStep3: 'Scroll to "Integrate calendar" and copy the Embed Code URL.',
+    calendarStep4: 'Paste it in Settings → Google Calendar below.',
+    calendarTitle: 'Google Calendar',
+    calendarEmbedUrl: 'Embed URL',
+    calendarEmbedUrlPlaceholder: 'https://calendar.google.com/calendar/embed?src=...',
+    calendarSave: 'Save URL',
+    calendarClear: 'Clear',
+    calendarUrlSaved: 'Saved!',
+    goToSettings: 'Go to Settings',
+
     // Error boundary
     somethingWentWrong: 'Something went wrong',
     unexpectedError: 'An unexpected error occurred',
@@ -189,6 +206,7 @@ const translations = {
     navRecurring: 'Recurrentes',
     navProducts: 'Productos',
     navSettings: 'Ajustes',
+    navCalendar: 'Calendario',
     logout: 'Salir',
 
     // Login
@@ -343,6 +361,22 @@ const translations = {
     addProductLine: 'Agregar producto',
     removeProductLine: 'Quitar',
     selectProduct: 'Seleccionar un producto',
+
+    // Calendar page
+    calendar: 'Calendario',
+    calendarNotConfigured: 'Sin calendario configurado',
+    calendarSetupPrompt: 'Pega tu URL de Google Calendar en Ajustes para comenzar.',
+    calendarStep1: 'Abre Google Calendar en el navegador.',
+    calendarStep2: 'Ve a Configuracion → Configuracion de mis calendarios → selecciona un calendario.',
+    calendarStep3: 'Baja hasta "Integrar calendario" y copia la URL del codigo de insercion.',
+    calendarStep4: 'Pegala en Ajustes → Google Calendar abajo.',
+    calendarTitle: 'Google Calendar',
+    calendarEmbedUrl: 'URL de insercion',
+    calendarEmbedUrlPlaceholder: 'https://calendar.google.com/calendar/embed?src=...',
+    calendarSave: 'Guardar URL',
+    calendarClear: 'Limpiar',
+    calendarUrlSaved: 'Guardado!',
+    goToSettings: 'Ir a Ajustes',
 
     // Error boundary
     somethingWentWrong: 'Algo salio mal',

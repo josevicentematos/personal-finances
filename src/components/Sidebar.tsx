@@ -12,6 +12,7 @@ export function Sidebar() {
     { to: '/categories', label: t('navCategories'), icon: '📁' },
     { to: '/recurrents', label: t('navRecurring'), icon: '🔄' },
     { to: '/products', label: t('navProducts'), icon: '🛒' },
+    { to: '/calendar', label: t('navCalendar'), icon: '📅' },
     { to: '/settings', label: t('navSettings'), icon: '⚙️' },
   ]
 

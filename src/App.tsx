@@ -9,6 +9,7 @@ import { CategoriesPage } from './pages/CategoriesPage'
 import { RecurringPage } from './pages/RecurringPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { CalendarPage } from './pages/CalendarPage'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="recurrents" element={<RecurringPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

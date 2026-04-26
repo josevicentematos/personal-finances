@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, FormEvent, useRef } from 'react'
+import { CALENDAR_URL_KEY } from './CalendarPage'
 import { supabase } from '@/lib/supabase'
 import { AppSettings } from '@/types'
 import { PageSpinner } from '@/components/Spinner'
@@ -12,11 +13,16 @@ export function SettingsPage() {
   const [dollarRate, setDollarRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [calendarUrl, setCalendarUrl] = useState('')
+  const [calendarSaved, setCalendarSaved] = useState(false)
   const { t, language, setLanguage } = useTranslation()
+  const calendarInputRef = useRef<HTMLInputElement>(null)
   const { mode, setMode } = useTheme()
 
   useEffect(() => {
     fetchSettings()
+    const stored = localStorage.getItem(CALENDAR_URL_KEY)
+    if (stored) setCalendarUrl(stored)
   }, [])
 
   async function fetchSettings() {
@@ -64,6 +70,18 @@ export function SettingsPage() {
 
   function handleThemeChange(newMode: ThemeMode) {
     setMode(newMode)
+  }
+
+  function handleCalendarSave() {
+    localStorage.setItem(CALENDAR_URL_KEY, calendarUrl.trim())
+    setCalendarSaved(true)
+    setTimeout(() => setCalendarSaved(false), 2000)
+  }
+
+  function handleCalendarClear() {
+    localStorage.removeItem(CALENDAR_URL_KEY)
+    setCalendarUrl('')
+    calendarInputRef.current?.focus()
   }
 
   return (
@@ -140,6 +158,41 @@ export function SettingsPage() {
                 }`}
               >
                 {t('themeSystem')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('calendarTitle')}</h2>
+          <div className="space-y-3">
+            <label htmlFor="calendarUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('calendarEmbedUrl')}
+            </label>
+            <input
+              id="calendarUrl"
+              ref={calendarInputRef}
+              type="url"
+              value={calendarUrl}
+              onChange={(e) => setCalendarUrl(e.target.value)}
+              placeholder={t('calendarEmbedUrlPlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCalendarSave}
+                disabled={!calendarUrl.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {calendarSaved ? t('calendarUrlSaved') : t('calendarSave')}
+              </button>
+              <button
+                onClick={handleCalendarClear}
+                disabled={!calendarUrl}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+              >
+                {t('calendarClear')}
               </button>
             </div>
           </div>
